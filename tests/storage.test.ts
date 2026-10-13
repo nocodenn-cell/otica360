@@ -119,3 +119,22 @@ describe('exportToCSV', () => {
     expect(csv).toContain('"João",""');
   });
 });
+
+describe('regressões CSV', () => {
+  it('preserva vírgulas, aspas e quebras de linha entre aspas', () => {
+    const input = 'Nome,Notas\r\n"Maria, Silva","Linha 1\nLinha ""2"""';
+    expect(parseCSV(input)).toEqual({ headers: ['Nome', 'Notas'], rows: [['Maria, Silva', 'Linha 1\nLinha "2"']] });
+  });
+  it('remove BOM e aceita CRLF', () => {
+    expect(parseCSV('\uFEFFNome,Telefone\r\nJoão,11999999999\r\n').rows).toEqual([['João', '11999999999']]);
+  });
+  it('rejeita aspas abertas e quantidade de colunas inválida', () => {
+    expect(() => parseCSV('Nome,Nota\nJoão,"aberta')).toThrow(/aspas não fechadas/);
+    expect(() => parseCSV('Nome,Nota\nJoão')).toThrow(/colunas/);
+  });
+  it('faz round-trip de cabeçalhos e campos especiais', () => {
+    const headers = ['Nome, completo', 'Notas'];
+    const rows = [['João "J"', 'linha 1\nlinha 2']];
+    expect(parseCSV(exportToCSV(headers, rows))).toEqual({ headers, rows });
+  });
+});
