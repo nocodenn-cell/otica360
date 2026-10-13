@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useReducer, useCallback, useRef, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useCallback, useRef, ReactNode } from 'react';
 import { AppState, Customer, Product, Sale, Lead, Quote, FollowUpTask, MarketingCampaign, MessageEvent } from '../types';
 import { loadState, saveState, addCustomer as addCustomerStore, updateCustomer as updateCustomerStore, addProduct as addProductStore, updateProduct as updateProductStore, addSale as addSaleStore, updateSaleStatus as updateSaleStatusStore, addLead as addLeadStore, updateLead as updateLeadStore, addQuote as addQuoteStore, updateQuote as updateQuoteStore, addFollowUp as addFollowUpStore, updateFollowUp as updateFollowUpStore, addCampaign as addCampaignStore, updateCampaign as updateCampaignStore, addMessageEvent as addMessageEventStore } from '../utils/storage';
 
@@ -84,8 +84,6 @@ function reducer(state: AppState, action: Action): AppState {
     default:
       return state;
   }
-  // Persist after every state change
-  saveState(newState);
   return newState;
 }
 
@@ -124,7 +122,8 @@ interface AppContextType {
 const AppContext = createContext<AppContextType | null>(null);
 
 export function AppProvider({ children }: { children: ReactNode }) {
-  const [state, dispatch] = useReducer(reducer, null, () => loadState());
+  const [state, setStateValue] = useState<AppState>(() => loadState());
+  const stateRef = useRef(state);
   const [toast, setToast] = React.useState('');
   const toastTimeoutRef = useRef<ReturnType<typeof setTimeout>>();
 
@@ -134,10 +133,28 @@ export function AppProvider({ children }: { children: ReactNode }) {
     toastTimeoutRef.current = setTimeout(() => setToast(''), 3000);
   }, []);
 
+  // Persist synchronously before publishing the new state or confirming success.
+  // A ref keeps consecutive operations based on the latest committed state.
+  const dispatch = useCallback((action: Action): boolean => {
+    try {
+      const next = reducer(stateRef.current, action);
+      if (next !== stateRef.current) {
+        saveState(next);
+        stateRef.current = next;
+        setStateValue(next);
+      }
+      return true;
+    } catch (error) {
+      console.error('Não foi possível persistir a operação:', error);
+      showToast('Erro ao salvar. Nenhuma alteração foi confirmada.');
+      return false;
+    }
+  }, [showToast]);
+
   // All dispatches use action objects — no stale closures
   const addCustomer = useCallback((c: Omit<Customer, 'id' | 'organizationId' | 'createdAt' | 'updatedAt'>) => {
-    dispatch({ type: 'ADD_CUSTOMER', customer: c });
-    showToast('Cliente cadastrado com sucesso!');
+    if (dispatch({ type: 'ADD_CUSTOMER', customer: c })) {
+    showToast('Cliente cadastrado com sucesso!'); }
   }, [showToast]);
 
   const updateCustomer = useCallback((id: string, u: Partial<Customer>) => {
@@ -145,8 +162,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const addProduct = useCallback((p: Omit<Product, 'id' | 'organizationId' | 'createdAt' | 'updatedAt'>) => {
-    dispatch({ type: 'ADD_PRODUCT', product: p });
-    showToast('Produto cadastrado!');
+    if (dispatch({ type: 'ADD_PRODUCT', product: p })) {
+    showToast('Produto cadastrado!'); }
   }, [showToast]);
 
   const updateProduct = useCallback((id: string, u: Partial<Product>) => {
@@ -154,18 +171,18 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const addSale = useCallback((s: Omit<Sale, 'id' | 'organizationId' | 'createdAt' | 'updatedAt'>) => {
-    dispatch({ type: 'ADD_SALE', sale: s });
-    showToast('Venda registrada!');
+    if (dispatch({ type: 'ADD_SALE', sale: s })) {
+    showToast('Venda registrada!'); }
   }, [showToast]);
 
   const updateSaleStatus = useCallback((id: string, status: Sale['status']) => {
-    dispatch({ type: 'UPDATE_SALE_STATUS', id, status });
-    showToast('Status atualizado!');
+    if (dispatch({ type: 'UPDATE_SALE_STATUS', id, status })) {
+    showToast('Status atualizado!'); }
   }, [showToast]);
 
   const addLead = useCallback((l: Omit<Lead, 'id' | 'organizationId' | 'createdAt' | 'updatedAt'>) => {
-    dispatch({ type: 'ADD_LEAD', lead: l });
-    showToast('Lead cadastrado!');
+    if (dispatch({ type: 'ADD_LEAD', lead: l })) {
+    showToast('Lead cadastrado!'); }
   }, [showToast]);
 
   const updateLead = useCallback((id: string, u: Partial<Lead>) => {
@@ -173,8 +190,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const addQuote = useCallback((q: Omit<Quote, 'id' | 'organizationId' | 'createdAt' | 'updatedAt'>) => {
-    dispatch({ type: 'ADD_QUOTE', quote: q });
-    showToast('Orçamento criado!');
+    if (dispatch({ type: 'ADD_QUOTE', quote: q })) {
+    showToast('Orçamento criado!'); }
   }, [showToast]);
 
   const updateQuote = useCallback((id: string, u: Partial<Quote>) => {
@@ -182,8 +199,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const addFollowUp = useCallback((f: Omit<FollowUpTask, 'id' | 'organizationId' | 'createdAt' | 'updatedAt'>) => {
-    dispatch({ type: 'ADD_FOLLOW_UP', task: f });
-    showToast('Tarefa criada!');
+    if (dispatch({ type: 'ADD_FOLLOW_UP', task: f })) {
+    showToast('Tarefa criada!'); }
   }, [showToast]);
 
   const updateFollowUp = useCallback((id: string, u: Partial<FollowUpTask>) => {
@@ -191,8 +208,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const addCampaign = useCallback((c: Omit<MarketingCampaign, 'id' | 'organizationId' | 'createdAt' | 'updatedAt'>) => {
-    dispatch({ type: 'ADD_CAMPAIGN', campaign: c });
-    showToast('Campanha criada!');
+    if (dispatch({ type: 'ADD_CAMPAIGN', campaign: c })) {
+    showToast('Campanha criada!'); }
   }, [showToast]);
 
   const updateCampaign = useCallback((id: string, u: Partial<MarketingCampaign>) => {
@@ -204,8 +221,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const importCustomers = useCallback((customers: Omit<Customer, 'id' | 'organizationId' | 'createdAt' | 'updatedAt'>[]) => {
-    dispatch({ type: 'IMPORT_CUSTOMERS', customers });
-    showToast(`${customers.length} cliente(s) importado(s)!`);
+    if (dispatch({ type: 'IMPORT_CUSTOMERS', customers })) {
+    showToast(`${customers.length} cliente(s) importado(s)!`); }
   }, [showToast]);
 
   const setState = useCallback((s: AppState) => {
