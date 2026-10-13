@@ -44,6 +44,7 @@ export function saveState(state: AppState): void {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
   } catch (e) {
     console.error('Error saving state:', e);
+    throw e;
   }
 }
 
@@ -205,30 +206,59 @@ export function addMessageEvent(state: AppState, event: Omit<MessageEvent, 'id' 
   return { ...state, messageEvents: [...state.messageEvents, newEvent] };
 }
 
-// CSV import
+// CSV import: RFC 4180-style quoted fields, including escaped quotes and newlines.
 export function parseCSV(text: string): { headers: string[]; rows: string[][] } {
-  const lines = text.split('\n').map(l => l.trim()).filter(l => l.length > 0);
-  if (lines.length === 0) return { headers: [], rows: [] };
-  const headers = lines[0].split(',').map(h => h.trim().replace(/^"|"$/g, ''));
-  const rows = lines.slice(1).map(line => {
-    const values: string[] = [];
-    let current = '';
-    let inQuotes = false;
-    for (const char of line) {
-      if (char === '"') { inQuotes = !inQuotes; }
-      else if (char === ',' && !inQuotes) { values.push(current.trim()); current = ''; }
-      else { current += char; }
+  const input = text.replace(/^\uFEFF/, '');
+  if (!input.trim()) return { headers: [], rows: [] };
+  const records: string[][] = [];
+  let row: string[] = [];
+  let field = '';
+  let inQuotes = false;
+  let afterQuote = false;
+  let atFieldStart = true;
+  const finishField = () => {
+    row.push(field);
+    field = '';
+    atFieldStart = true;
+    afterQuote = false;
+  };
+  const finishRow = () => {
+    finishField();
+    if (row.some(value => value.length > 0)) records.push(row);
+    row = [];
+  };
+  for (let i = 0; i < input.length; i++) {
+    const c = input[i];
+    if (inQuotes) {
+      if (c === '"') {
+        if (input[i + 1] === '"') { field += '"'; i++; }
+        else { inQuotes = false; afterQuote = true; }
+      } else field += c;
+    } else if (c === ',') {
+      finishField();
+    } else if (c === '\n' || c === '\r') {
+      finishRow();
+      if (c === '\r' && input[i + 1] === '\n') i++;
+    } else if (c === '"' && atFieldStart) {
+      inQuotes = true;
+      atFieldStart = false;
+    } else if (c === '"' || afterQuote) {
+      throw new Error('CSV inválido: aspas malformadas');
+    } else {
+      field += c;
+      atFieldStart = false;
     }
-    values.push(current.trim());
-    return values;
-  });
+  }
+  if (inQuotes) throw new Error('CSV inválido: aspas não fechadas');
+  if (field !== '' || row.length > 0 || afterQuote) finishRow();
+  const [headers = [], ...rows] = records;
+  if (rows.some(r => r.length !== headers.length)) {
+    throw new Error('CSV inválido: número de colunas inconsistente');
+  }
   return { headers, rows };
 }
 
 export function exportToCSV(headers: string[], rows: string[][]): string {
-  const csvRows = [headers.join(',')];
-  for (const row of rows) {
-    csvRows.push(row.map(v => `"${(v || '').replace(/"/g, '""')}"`).join(','));
-  }
-  return csvRows.join('\n');
+  const encode = (value: string) => `"${String(value ?? '').replace(/"/g, '""')}"`;
+  return [headers.map(h => /[\",\r\n]/.test(h) ? encode(h) : h).join(','), ...rows.map(row => row.map(encode).join(','))].join('\r\n');
 }
