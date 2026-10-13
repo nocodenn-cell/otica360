@@ -1,18 +1,92 @@
-import React, { createContext, useContext, useReducer, useCallback, ReactNode } from 'react';
+import React, { createContext, useContext, useReducer, useCallback, useRef, ReactNode } from 'react';
 import { AppState, Customer, Product, Sale, Lead, Quote, FollowUpTask, MarketingCampaign, MessageEvent } from '../types';
 import { loadState, saveState, addCustomer as addCustomerStore, updateCustomer as updateCustomerStore, addProduct as addProductStore, updateProduct as updateProductStore, addSale as addSaleStore, updateSaleStatus as updateSaleStatusStore, addLead as addLeadStore, updateLead as updateLeadStore, addQuote as addQuoteStore, updateQuote as updateQuoteStore, addFollowUp as addFollowUpStore, updateFollowUp as updateFollowUpStore, addCampaign as addCampaignStore, updateCampaign as updateCampaignStore, addMessageEvent as addMessageEventStore } from '../utils/storage';
 
-type Action = { type: 'SET_STATE'; payload: AppState } | { type: 'RESET' };
+// Use functional updates to avoid stale closure issues
+type Action =
+  | { type: 'SET_STATE'; payload: AppState }
+  | { type: 'ADD_CUSTOMER'; customer: Omit<Customer, 'id' | 'organizationId' | 'createdAt' | 'updatedAt'> }
+  | { type: 'UPDATE_CUSTOMER'; id: string; updates: Partial<Customer> }
+  | { type: 'ADD_PRODUCT'; product: Omit<Product, 'id' | 'organizationId' | 'createdAt' | 'updatedAt'> }
+  | { type: 'UPDATE_PRODUCT'; id: string; updates: Partial<Product> }
+  | { type: 'ADD_SALE'; sale: Omit<Sale, 'id' | 'organizationId' | 'createdAt' | 'updatedAt'> }
+  | { type: 'UPDATE_SALE_STATUS'; id: string; status: Sale['status'] }
+  | { type: 'ADD_LEAD'; lead: Omit<Lead, 'id' | 'organizationId' | 'createdAt' | 'updatedAt'> }
+  | { type: 'UPDATE_LEAD'; id: string; updates: Partial<Lead> }
+  | { type: 'ADD_QUOTE'; quote: Omit<Quote, 'id' | 'organizationId' | 'createdAt' | 'updatedAt'> }
+  | { type: 'UPDATE_QUOTE'; id: string; updates: Partial<Quote> }
+  | { type: 'ADD_FOLLOW_UP'; task: Omit<FollowUpTask, 'id' | 'organizationId' | 'createdAt' | 'updatedAt'> }
+  | { type: 'UPDATE_FOLLOW_UP'; id: string; updates: Partial<FollowUpTask> }
+  | { type: 'ADD_CAMPAIGN'; campaign: Omit<MarketingCampaign, 'id' | 'organizationId' | 'createdAt' | 'updatedAt'> }
+  | { type: 'UPDATE_CAMPAIGN'; id: string; updates: Partial<MarketingCampaign> }
+  | { type: 'ADD_MESSAGE_EVENT'; event: Omit<MessageEvent, 'id' | 'organizationId' | 'createdAt'> }
+  | { type: 'IMPORT_CUSTOMERS'; customers: Omit<Customer, 'id' | 'organizationId' | 'createdAt' | 'updatedAt'>[] }
+  | { type: 'RESET' };
 
 function reducer(state: AppState, action: Action): AppState {
+  let newState: AppState;
   switch (action.type) {
-    case 'SET_STATE': return action.payload;
-    case 'RESET': {
-      const fresh = loadState();
-      return fresh;
-    }
-    default: return state;
+    case 'SET_STATE':
+      return action.payload;
+    case 'RESET':
+      return loadState();
+    case 'ADD_CUSTOMER':
+      newState = addCustomerStore(state, action.customer);
+      break;
+    case 'UPDATE_CUSTOMER':
+      newState = updateCustomerStore(state, action.id, action.updates);
+      break;
+    case 'ADD_PRODUCT':
+      newState = addProductStore(state, action.product);
+      break;
+    case 'UPDATE_PRODUCT':
+      newState = updateProductStore(state, action.id, action.updates);
+      break;
+    case 'ADD_SALE':
+      newState = addSaleStore(state, action.sale);
+      break;
+    case 'UPDATE_SALE_STATUS':
+      newState = updateSaleStatusStore(state, action.id, action.status);
+      break;
+    case 'ADD_LEAD':
+      newState = addLeadStore(state, action.lead);
+      break;
+    case 'UPDATE_LEAD':
+      newState = updateLeadStore(state, action.id, action.updates);
+      break;
+    case 'ADD_QUOTE':
+      newState = addQuoteStore(state, action.quote);
+      break;
+    case 'UPDATE_QUOTE':
+      newState = updateQuoteStore(state, action.id, action.updates);
+      break;
+    case 'ADD_FOLLOW_UP':
+      newState = addFollowUpStore(state, action.task);
+      break;
+    case 'UPDATE_FOLLOW_UP':
+      newState = updateFollowUpStore(state, action.id, action.updates);
+      break;
+    case 'ADD_CAMPAIGN':
+      newState = addCampaignStore(state, action.campaign);
+      break;
+    case 'UPDATE_CAMPAIGN':
+      newState = updateCampaignStore(state, action.id, action.updates);
+      break;
+    case 'ADD_MESSAGE_EVENT':
+      newState = addMessageEventStore(state, action.event);
+      break;
+    case 'IMPORT_CUSTOMERS':
+      newState = { ...state };
+      for (const c of action.customers) {
+        newState = addCustomerStore(newState, c);
+      }
+      break;
+    default:
+      return state;
   }
+  // Persist after every state change
+  saveState(newState);
+  return newState;
 }
 
 interface AppContextType {
@@ -52,125 +126,104 @@ const AppContext = createContext<AppContextType | null>(null);
 export function AppProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(reducer, null, () => loadState());
   const [toast, setToast] = React.useState('');
+  const toastTimeoutRef = useRef<ReturnType<typeof setTimeout>>();
 
   const showToast = useCallback((msg: string) => {
     setToast(msg);
-    setTimeout(() => setToast(''), 3000);
+    if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current);
+    toastTimeoutRef.current = setTimeout(() => setToast(''), 3000);
   }, []);
 
-  const persist = useCallback((newState: AppState) => {
-    saveState(newState);
-    dispatch({ type: 'SET_STATE', payload: newState });
-  }, []);
-
-  const addCustomerFn = useCallback((c: Omit<Customer, 'id' | 'organizationId' | 'createdAt' | 'updatedAt'>) => {
-    const newState = addCustomerStore(state, c);
-    persist(newState);
+  // All dispatches use action objects — no stale closures
+  const addCustomer = useCallback((c: Omit<Customer, 'id' | 'organizationId' | 'createdAt' | 'updatedAt'>) => {
+    dispatch({ type: 'ADD_CUSTOMER', customer: c });
     showToast('Cliente cadastrado com sucesso!');
-  }, [state, persist, showToast]);
+  }, [showToast]);
 
-  const updateCustomerFn = useCallback((id: string, u: Partial<Customer>) => {
-    const newState = updateCustomerStore(state, id, u);
-    persist(newState);
-  }, [state, persist]);
+  const updateCustomer = useCallback((id: string, u: Partial<Customer>) => {
+    dispatch({ type: 'UPDATE_CUSTOMER', id, updates: u });
+  }, []);
 
-  const addProductFn = useCallback((p: Omit<Product, 'id' | 'organizationId' | 'createdAt' | 'updatedAt'>) => {
-    const newState = addProductStore(state, p);
-    persist(newState);
+  const addProduct = useCallback((p: Omit<Product, 'id' | 'organizationId' | 'createdAt' | 'updatedAt'>) => {
+    dispatch({ type: 'ADD_PRODUCT', product: p });
     showToast('Produto cadastrado!');
-  }, [state, persist, showToast]);
+  }, [showToast]);
 
-  const updateProductFn = useCallback((id: string, u: Partial<Product>) => {
-    const newState = updateProductStore(state, id, u);
-    persist(newState);
-  }, [state, persist]);
+  const updateProduct = useCallback((id: string, u: Partial<Product>) => {
+    dispatch({ type: 'UPDATE_PRODUCT', id, updates: u });
+  }, []);
 
-  const addSaleFn = useCallback((s: Omit<Sale, 'id' | 'organizationId' | 'createdAt' | 'updatedAt'>) => {
-    const newState = addSaleStore(state, s);
-    persist(newState);
+  const addSale = useCallback((s: Omit<Sale, 'id' | 'organizationId' | 'createdAt' | 'updatedAt'>) => {
+    dispatch({ type: 'ADD_SALE', sale: s });
     showToast('Venda registrada!');
-  }, [state, persist, showToast]);
+  }, [showToast]);
 
-  const updateSaleStatusFn = useCallback((id: string, status: Sale['status']) => {
-    const newState = updateSaleStatusStore(state, id, status);
-    persist(newState);
+  const updateSaleStatus = useCallback((id: string, status: Sale['status']) => {
+    dispatch({ type: 'UPDATE_SALE_STATUS', id, status });
     showToast('Status atualizado!');
-  }, [state, persist, showToast]);
+  }, [showToast]);
 
-  const addLeadFn = useCallback((l: Omit<Lead, 'id' | 'organizationId' | 'createdAt' | 'updatedAt'>) => {
-    const newState = addLeadStore(state, l);
-    persist(newState);
+  const addLead = useCallback((l: Omit<Lead, 'id' | 'organizationId' | 'createdAt' | 'updatedAt'>) => {
+    dispatch({ type: 'ADD_LEAD', lead: l });
     showToast('Lead cadastrado!');
-  }, [state, persist, showToast]);
+  }, [showToast]);
 
-  const updateLeadFn = useCallback((id: string, u: Partial<Lead>) => {
-    const newState = updateLeadStore(state, id, u);
-    persist(newState);
-  }, [state, persist]);
+  const updateLead = useCallback((id: string, u: Partial<Lead>) => {
+    dispatch({ type: 'UPDATE_LEAD', id, updates: u });
+  }, []);
 
-  const addQuoteFn = useCallback((q: Omit<Quote, 'id' | 'organizationId' | 'createdAt' | 'updatedAt'>) => {
-    const newState = addQuoteStore(state, q);
-    persist(newState);
+  const addQuote = useCallback((q: Omit<Quote, 'id' | 'organizationId' | 'createdAt' | 'updatedAt'>) => {
+    dispatch({ type: 'ADD_QUOTE', quote: q });
     showToast('Orçamento criado!');
-  }, [state, persist, showToast]);
+  }, [showToast]);
 
-  const updateQuoteFn = useCallback((id: string, u: Partial<Quote>) => {
-    const newState = updateQuoteStore(state, id, u);
-    persist(newState);
-  }, [state, persist]);
+  const updateQuote = useCallback((id: string, u: Partial<Quote>) => {
+    dispatch({ type: 'UPDATE_QUOTE', id, updates: u });
+  }, []);
 
-  const addFollowUpFn = useCallback((f: Omit<FollowUpTask, 'id' | 'organizationId' | 'createdAt' | 'updatedAt'>) => {
-    const newState = addFollowUpStore(state, f);
-    persist(newState);
+  const addFollowUp = useCallback((f: Omit<FollowUpTask, 'id' | 'organizationId' | 'createdAt' | 'updatedAt'>) => {
+    dispatch({ type: 'ADD_FOLLOW_UP', task: f });
     showToast('Tarefa criada!');
-  }, [state, persist, showToast]);
+  }, [showToast]);
 
-  const updateFollowUpFn = useCallback((id: string, u: Partial<FollowUpTask>) => {
-    const newState = updateFollowUpStore(state, id, u);
-    persist(newState);
-  }, [state, persist]);
+  const updateFollowUp = useCallback((id: string, u: Partial<FollowUpTask>) => {
+    dispatch({ type: 'UPDATE_FOLLOW_UP', id, updates: u });
+  }, []);
 
-  const addCampaignFn = useCallback((c: Omit<MarketingCampaign, 'id' | 'organizationId' | 'createdAt' | 'updatedAt'>) => {
-    const newState = addCampaignStore(state, c);
-    persist(newState);
+  const addCampaign = useCallback((c: Omit<MarketingCampaign, 'id' | 'organizationId' | 'createdAt' | 'updatedAt'>) => {
+    dispatch({ type: 'ADD_CAMPAIGN', campaign: c });
     showToast('Campanha criada!');
-  }, [state, persist, showToast]);
+  }, [showToast]);
 
-  const updateCampaignFn = useCallback((id: string, u: Partial<MarketingCampaign>) => {
-    const newState = updateCampaignStore(state, id, u);
-    persist(newState);
-  }, [state, persist]);
+  const updateCampaign = useCallback((id: string, u: Partial<MarketingCampaign>) => {
+    dispatch({ type: 'UPDATE_CAMPAIGN', id, updates: u });
+  }, []);
 
-  const addMessageEventFn = useCallback((e: Omit<MessageEvent, 'id' | 'organizationId' | 'createdAt'>) => {
-    const newState = addMessageEventStore(state, e);
-    persist(newState);
-  }, [state, persist]);
+  const addMessageEvent = useCallback((e: Omit<MessageEvent, 'id' | 'organizationId' | 'createdAt'>) => {
+    dispatch({ type: 'ADD_MESSAGE_EVENT', event: e });
+  }, []);
 
-  const importCustomersFn = useCallback((customers: Omit<Customer, 'id' | 'organizationId' | 'createdAt' | 'updatedAt'>[]) => {
-    let newState = { ...state };
-    for (const c of customers) {
-      newState = addCustomerStore(newState, c);
-    }
-    persist(newState);
+  const importCustomers = useCallback((customers: Omit<Customer, 'id' | 'organizationId' | 'createdAt' | 'updatedAt'>[]) => {
+    dispatch({ type: 'IMPORT_CUSTOMERS', customers });
     showToast(`${customers.length} cliente(s) importado(s)!`);
-  }, [state, persist, showToast]);
+  }, [showToast]);
 
-  const setStateFn = useCallback((s: AppState) => {
-    persist(s);
-  }, [persist]);
+  const setState = useCallback((s: AppState) => {
+    dispatch({ type: 'SET_STATE', payload: s });
+  }, []);
 
   const value: AppContextType = {
     state, toast, showToast,
-    addCustomer: addCustomerFn, updateCustomer: updateCustomerFn,
-    addProduct: addProductFn, updateProduct: updateProductFn,
-    addSale: addSaleFn, updateSaleStatus: updateSaleStatusFn,
-    addLead: addLeadFn, updateLead: updateLeadFn,
-    addQuote: addQuoteFn, updateQuote: updateQuoteFn,
-    addFollowUp: addFollowUpFn, updateFollowUp: updateFollowUpFn,
-    addCampaign: addCampaignFn, updateCampaign: updateCampaignFn,
-    addMessageEvent: addMessageEventFn,
-    importCustomers: importCustomersFn,
-    setState: setStateFn,
+    addCustomer, updateCustomer,
+    addProduct, updateProduct,
+    addSale, updateSaleStatus,
+    addLead, updateLead,
+    addQuote, updateQuote,
+    addFollowUp, updateFollowUp,
+    addCampaign, updateCampaign,
+    addMessageEvent,
+    importCustomers,
+    setState,
   };
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;

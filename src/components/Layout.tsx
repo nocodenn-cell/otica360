@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { NavLink, Outlet } from 'react-router-dom';
-import { LayoutDashboard, Users, Package, ShoppingCart, Target, CalendarCheck, MessageCircle, BarChart3, Megaphone, Menu, X, Eye } from 'lucide-react';
+import { LayoutDashboard, Users, Package, ShoppingCart, Target, CalendarCheck, MessageCircle, BarChart3, Megaphone, Menu, X, Eye, LogOut } from 'lucide-react';
 import { useApp } from '../contexts/AppContext';
+import { UserProfile } from '../types';
 
 const navItems = [
   { to: '/', icon: LayoutDashboard, label: 'Dashboard' },
@@ -15,7 +16,12 @@ const navItems = [
   { to: '/relatorios', icon: BarChart3, label: 'Relatórios' },
 ];
 
-export default function Layout() {
+interface LayoutProps {
+  onLogout?: () => void;
+  user?: UserProfile | null;
+}
+
+export default function Layout({ onLogout, user }: LayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const { toast } = useApp();
 
@@ -70,8 +76,15 @@ export default function Layout() {
           </button>
           <h1 className="text-lg font-semibold text-gray-800 hidden sm:block">Sistema de Gestão Comercial</h1>
           <div className="ml-auto flex items-center gap-2">
-            <span className="text-sm text-gray-500">Administrador</span>
-            <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-700 font-semibold text-sm">A</div>
+            <span className="text-sm text-gray-500 hidden sm:inline">{user?.name || 'Administrador'}</span>
+            <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-700 font-semibold text-sm">
+              {(user?.name || 'A').charAt(0).toUpperCase()}
+            </div>
+            {onLogout && (
+              <button onClick={onLogout} className="p-1.5 text-gray-400 hover:text-red-600 rounded" title="Sair">
+                <LogOut className="w-4 h-4" />
+              </button>
+            )}
           </div>
         </header>
 
