@@ -260,5 +260,5 @@ export function parseCSV(text: string): { headers: string[]; rows: string[][] } 
 
 export function exportToCSV(headers: string[], rows: string[][]): string {
   const encode = (value: string) => `"${String(value ?? '').replace(/"/g, '""')}"`;
-  return [headers.map(encode).join(','), ...rows.map(row => row.map(encode).join(','))].join('\r\n');
+  return [headers.map(h => /[\",\r\n]/.test(h) ? encode(h) : h).join(','), ...rows.map(row => row.map(encode).join(','))].join('\r\n');
 }
