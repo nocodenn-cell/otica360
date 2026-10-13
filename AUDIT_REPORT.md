@@ -1,4 +1,4 @@
-# ÓTICA360 — Relatório de Auditoria e Pendências
+# Ateliê da Ótica — Relatório de Auditoria e Pendências
 
 ## Data: Janeiro 2026
 ## Versão: 1.1.0 (Pós-Auditoria)
@@ -234,5 +234,5 @@ dist/assets/index.js            696.00 kB
 
 ---
 
-**Relatório gerado automaticamente pelo Engineering Loop do Ótica360**
+**Relatório gerado automaticamente pelo Engineering Loop do Ateliê da Ótica**
 **Próxima auditoria programada**: Após Sprint 2

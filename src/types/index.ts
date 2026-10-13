@@ -1,4 +1,4 @@
-// Ótica360 - Type Definitions
+// Ateliê da Ótica - Type Definitions
 
 export interface Organization {
   id: string;

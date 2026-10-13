@@ -34,10 +34,9 @@ export default function Layout({ onLogout, user }: LayoutProps) {
 
       {/* Sidebar */}
       <aside className={`fixed lg:static inset-y-0 left-0 z-50 w-64 bg-white border-r border-gray-200 transform transition-transform duration-200 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}`}>
-        <div className="flex items-center gap-2 px-5 py-4 border-b border-gray-100">
-          <Eye className="w-7 h-7 text-blue-600" />
-          <span className="text-lg font-bold text-gray-800">Ótica360</span>
-          <button className="ml-auto lg:hidden" onClick={() => setSidebarOpen(false)}>
+          <div className="flex items-center gap-2 px-5 py-4 border-b border-gray-100">
+            <Eye className="w-7 h-7 text-blue-600" />
+            <span className="text-lg font-bold text-gray-800">Ateliê da Ótica</span>          <button className="ml-auto lg:hidden" onClick={() => setSidebarOpen(false)}>
             <X className="w-5 h-5 text-gray-500" />
           </button>
         </div>

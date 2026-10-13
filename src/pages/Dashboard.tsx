@@ -79,7 +79,7 @@ export default function Dashboard() {
 
       {!hasData && (
         <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 text-blue-800">
-          <p className="font-medium">Bem-vindo ao Ótica360!</p>
+          <p className="font-medium">Bem-vindo ao Ateliê da Ótica!</p>
           <p className="text-sm mt-1">Comece cadastrando seus clientes e registrando vendas para visualizar os indicadores aqui.</p>
         </div>
       )}

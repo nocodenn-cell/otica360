@@ -1,4 +1,4 @@
--- ÓTICA360 — Schema SQL para Supabase
+-- Ateliê da Ótica — Schema SQL para Supabase
 -- Versão: 1.0.0
 -- Data: 2026-01
 -- Descrição: Schema completo para o sistema de gestão comercial de ótica
@@ -511,7 +511,7 @@ GROUP BY organization_id;
 
 -- Inserir templates padrão
 INSERT INTO message_templates (organization_id, name, content, channel)
-SELECT id, 'Boas-vindas', 'Olá {{nome}}, seja bem-vindo(a)! Estamos felizes em atendê-lo(a).', 'whatsapp'
+SELECT id, 'Boas-vindas', 'Olá {{nome}}, seja bem-vindo(a) ao Ateliê da Ótica! Estamos felizes em atendê-lo(a).', 'whatsapp'
 FROM organizations;
 
 INSERT INTO message_templates (organization_id, name, content, channel)

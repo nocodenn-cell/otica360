@@ -1,8 +1,8 @@
-# ÓTICA360 — Sistema de Gestão Comercial para Óticas
+# Ateliê da Ótica — Sistema de Gestão Comercial para Óticas
 
 ## 📋 Visão Geral
 
-Ótica360 é uma plataforma web completa para gestão comercial de óticas, desenvolvida para ajudar proprietários a organizar clientes, registrar vendas, acompanhar leads, gerenciar pós-venda e visualizar indicadores comerciais.
+Ateliê da Ótica é uma plataforma web completa para gestão comercial de óticas, desenvolvida para ajudar proprietários a organizar clientes, registrar vendas, acompanhar leads, gerenciar pós-venda e visualizar indicadores comerciais.
 
 ## 🏗️ Arquitetura
 

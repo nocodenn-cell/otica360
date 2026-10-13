@@ -37,7 +37,7 @@ export default function Reports() {
     const headers = ['Número', 'Cliente', 'Data', 'Subtotal', 'Desconto', 'Total', 'Pagamento', 'Status', 'Origem', 'Responsável'];
     const rows = filteredSales.map(s => [s.number, s.customerName, s.date, s.subtotal.toString(), s.discount.toString(), s.total.toString(), PAYMENT_LABELS[s.paymentMethod], SALE_STATUS_LABELS[s.status], ORIGIN_LABELS[s.origin], s.responsible]);
     const csv = exportToCSV(headers, rows);
-    downloadCSV(csv, 'vendas_otica360.csv');
+    downloadCSV(csv, 'vendas_atelie_da_otica.csv');
     showToast('Exportação concluída!');
   };
 
@@ -45,7 +45,7 @@ export default function Reports() {
     const headers = ['Nome', 'Telefone', 'Email', 'Origem', 'Data Cadastro', 'Última Compra'];
     const rows = filteredCustomers.map(c => [c.name, c.phone, c.email, ORIGIN_LABELS[c.origin], c.createdAt.split('T')[0], c.lastPurchaseDate || '']);
     const csv = exportToCSV(headers, rows);
-    downloadCSV(csv, 'clientes_otica360.csv');
+    downloadCSV(csv, 'clientes_atelie_da_otica.csv');
     showToast('Exportação concluída!');
   };
 

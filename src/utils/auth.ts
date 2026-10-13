@@ -1,5 +1,5 @@
 /**
- * Ótica360 — Camada de Autenticação
+ * Ateliê da Ótica — Camada de Autenticação
  * 
  * Esta camada está preparada para integração com Supabase Auth.
  * No momento, opera em modo demonstração (mock).
@@ -57,7 +57,7 @@ export async function signInDemo(email: string, _password: string): Promise<{ us
   };
 
   // Salvar sessão no localStorage
-  localStorage.setItem('otica360_auth', JSON.stringify({ user, loggedInAt: new Date().toISOString() }));
+  localStorage.setItem('atelie_da_otica_auth', JSON.stringify({ user, loggedInAt: new Date().toISOString() }));
 
   return { user, error: null };
 }
@@ -66,7 +66,7 @@ export async function signInDemo(email: string, _password: string): Promise<{ us
  * Logout em modo demonstração
  */
 export async function signOutDemo(): Promise<void> {
-  localStorage.removeItem('otica360_auth');
+  localStorage.removeItem('atelie_da_otica_auth');
 }
 
 /**
@@ -74,7 +74,7 @@ export async function signOutDemo(): Promise<void> {
  */
 export function getSession(): UserProfile | null {
   try {
-    const raw = localStorage.getItem('otica360_auth');
+    const raw = localStorage.getItem('atelie_da_otica_auth');
     if (!raw) return null;
     const data = JSON.parse(raw);
     return data.user || null;

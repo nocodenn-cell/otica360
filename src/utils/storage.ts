@@ -1,13 +1,13 @@
 import { AppState, Customer, Product, Sale, Lead, Quote, FollowUpTask, MessageEvent, MessageTemplate, MarketingCampaign } from '../types';
 import { v4 as uuid } from 'uuid';
 
-const STORAGE_KEY = 'otica360_data';
+const STORAGE_KEY = 'atelie_da_otica_data';
 
 function getInitialState(): AppState {
   const orgId = 'org-default';
   return {
-    organization: { id: orgId, name: 'Ótica360', createdAt: new Date().toISOString() },
-    user: { id: 'user-1', organizationId: orgId, name: 'Administrador', email: 'admin@otica360.com', role: 'admin', createdAt: new Date().toISOString() },
+    organization: { id: orgId, name: 'Ateliê da Ótica', createdAt: new Date().toISOString() },
+    user: { id: 'user-1', organizationId: orgId, name: 'Administrador', email: 'admin@ateliedaotica.com', role: 'admin', createdAt: new Date().toISOString() },
     customers: [],
     products: [],
     sales: [],
@@ -16,7 +16,7 @@ function getInitialState(): AppState {
     followUps: [],
     messageEvents: [],
     messageTemplates: [
-      { id: uuid(), organizationId: orgId, name: 'Boas-vindas', content: 'Olá {{nome}}, seja bem-vindo(a) à Ótica360! Estamos felizes em atendê-lo(a).', channel: 'whatsapp', active: true, createdAt: new Date().toISOString() },
+      { id: uuid(), organizationId: orgId, name: 'Boas-vindas', content: 'Olá {{nome}}, seja bem-vindo(a) ao Ateliê da Ótica! Estamos felizes em atendê-lo(a).', channel: 'whatsapp', active: true, createdAt: new Date().toISOString() },
       { id: uuid(), organizationId: orgId, name: 'Pós-venda', content: 'Olá {{nome}}, como está se adaptando ao seu novo óculos? Estamos à disposição!', channel: 'whatsapp', active: true, createdAt: new Date().toISOString() },
       { id: uuid(), organizationId: orgId, name: 'Lembrete de revisão', content: 'Olá {{nome}}, já faz um tempo desde sua última consulta. Que tal agendar uma revisão?', channel: 'whatsapp', active: true, createdAt: new Date().toISOString() },
     ],

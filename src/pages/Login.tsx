@@ -48,7 +48,7 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
           {/* Logo */}
           <div className="flex items-center justify-center gap-2 mb-6">
             <Eye className="w-10 h-10 text-blue-600" />
-            <h1 className="text-2xl font-bold text-gray-800">Ótica360</h1>
+            <h1 className="text-2xl font-bold text-gray-800">Ateliê da Ótica</h1>
           </div>
 
           <p className="text-center text-gray-600 mb-6">
@@ -114,7 +114,7 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
         {/* Info */}
         <div className="mt-6 text-center">
           <p className="text-sm text-gray-600">
-            Precisa de ajuda? <a href="mailto:suporte@otica360.com" className="text-blue-600 hover:underline">Contate o suporte</a>
+            Precisa de ajuda? <a href="mailto:suporte@ateliedaotica.com" className="text-blue-600 hover:underline">Contate o suporte</a>
           </p>
         </div>
       </div>

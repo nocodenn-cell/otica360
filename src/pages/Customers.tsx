@@ -72,7 +72,7 @@ export default function Customers() {
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
-    a.href = url; a.download = 'clientes_otica360.csv'; a.click();
+    a.href = url; a.download = 'clientes_atelie_da_otica.csv'; a.click();
     URL.revokeObjectURL(url);
     showToast('Exportação concluída!');
   };
