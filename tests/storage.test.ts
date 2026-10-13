@@ -138,3 +138,19 @@ describe('regressões CSV', () => {
     expect(parseCSV(exportToCSV(headers, rows))).toEqual({ headers, rows });
   });
 });
+
+describe('falhas de persistência', () => {
+  it('propaga falhas de gravação em vez de confirmar sucesso', async () => {
+    const { saveState, loadState } = await import('../src/utils/storage');
+    const original = globalThis.localStorage;
+    const failing = { ...original, setItem: () => { throw new Error('quota exceeded'); } };
+    Object.defineProperty(globalThis, 'localStorage', { configurable: true, value: failing });
+    const spy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    try {
+      expect(() => saveState({} as any)).toThrow('quota exceeded');
+    } finally {
+      spy.mockRestore();
+      Object.defineProperty(globalThis, 'localStorage', { configurable: true, value: original });
+    }
+  });
+});
