@@ -3,6 +3,7 @@ import { useApp } from '../contexts/AppContext';
 import { formatCurrency, formatDate, formatPhone, PAYMENT_LABELS, SALE_STATUS_LABELS, ORIGIN_LABELS, generateSaleNumber, getTodayStr } from '../utils/format';
 import { Sale, SaleItem, PaymentMethod, SaleStatus, CustomerOrigin } from '../types';
 import { Plus, Search, X, ShoppingCart, Trash2 } from 'lucide-react';
+import { validateSaleItems } from '../utils/saleValidation';
 
 export default function Sales() {
   const { state, addSale, updateSaleStatus, showToast } = useApp();
@@ -43,8 +44,8 @@ export default function Sales() {
   const handleSave = () => {
     if (saleItems.length === 0) { showToast('Adicione pelo menos um item.'); return; }
     if (!form.date) { showToast('Informe a data da venda.'); return; }
-    if (!Number.isFinite(form.discount) || form.discount < 0 || form.discount > subtotal) { showToast('Desconto inválido.'); return; }
-    if (saleItems.some(item => !Number.isInteger(item.quantity) || item.quantity <= 0 || !Number.isFinite(item.unitPrice) || item.unitPrice < 0)) { showToast('Itens da venda inválidos.'); return; }
+    const validationError = validateSaleItems(saleItems, form.discount);
+    if (validationError) { showToast(validationError); return; }
 
     const saleNumber = generateSaleNumber(state.sales);
     addSale({
