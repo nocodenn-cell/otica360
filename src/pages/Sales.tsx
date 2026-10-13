@@ -22,7 +22,7 @@ export default function Sales() {
   const total = Math.max(0, subtotal - form.discount);
 
   const addItem = () => {
-    if (!selectedProductId) return;
+    if (!selectedProductId || !Number.isInteger(selectedQty) || selectedQty <= 0) { showToast('Informe uma quantidade válida.'); return; }
     const product = state.products.find(p => p.id === selectedProductId);
     if (!product) return;
     const existing = saleItems.find(i => i.productId === selectedProductId);
@@ -43,6 +43,8 @@ export default function Sales() {
   const handleSave = () => {
     if (saleItems.length === 0) { showToast('Adicione pelo menos um item.'); return; }
     if (!form.date) { showToast('Informe a data da venda.'); return; }
+    if (!Number.isFinite(form.discount) || form.discount < 0 || form.discount > subtotal) { showToast('Desconto inválido.'); return; }
+    if (saleItems.some(item => !Number.isInteger(item.quantity) || item.quantity <= 0 || !Number.isFinite(item.unitPrice) || item.unitPrice < 0)) { showToast('Itens da venda inválidos.'); return; }
 
     const saleNumber = generateSaleNumber(state.sales);
     addSale({
