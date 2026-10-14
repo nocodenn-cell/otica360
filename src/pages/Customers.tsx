@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useApp } from '../contexts/AppContext';
 import { formatPhone, formatDate, ORIGIN_LABELS, isValidPhone, isValidEmail, maskPhone } from '../utils/format';

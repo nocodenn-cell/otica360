@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import { useMemo } from 'react';
 import { useApp } from '../contexts/AppContext';
 import { formatCurrency, formatDate, isOverdue, isToday } from '../utils/format';
 import { TrendingUp, Users, ShoppingCart, Target, CalendarCheck, AlertTriangle, DollarSign, BarChart3 } from 'lucide-react';

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useApp } from '../contexts/AppContext';
 import { formatPhone, formatDate, formatCurrency, ORIGIN_LABELS, FOLLOW_UP_REASON_LABELS, FOLLOW_UP_STATUS_LABELS } from '../utils/format';

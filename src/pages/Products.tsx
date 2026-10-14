@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import { useApp } from '../contexts/AppContext';
 import { formatCurrency, CATEGORY_LABELS } from '../utils/format';
 import { Product, ProductCategory } from '../types';

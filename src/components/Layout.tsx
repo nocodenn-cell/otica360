@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { NavLink, Outlet } from 'react-router-dom';
 import { LayoutDashboard, Users, Package, ShoppingCart, Target, CalendarCheck, MessageCircle, BarChart3, Megaphone, Menu, X, Eye, LogOut } from 'lucide-react';
 import { useApp } from '../contexts/AppContext';

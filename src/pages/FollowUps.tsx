@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import { useApp } from '../contexts/AppContext';
 import { formatDate, formatPhone, FOLLOW_UP_STATUS_LABELS, FOLLOW_UP_REASON_LABELS, isOverdue, isToday } from '../utils/format';
 import { FollowUpTask, FollowUpStatus, FollowUpReason, ContactPreference } from '../types';

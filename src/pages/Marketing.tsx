@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { useApp } from '../contexts/AppContext';
 import { formatCurrency, formatDate } from '../utils/format';
 import { MarketingCampaign } from '../types';

@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import { useApp } from '../contexts/AppContext';
 import { formatCurrency, formatDate, formatPhone, ORIGIN_LABELS, PAYMENT_LABELS, SALE_STATUS_LABELS, FOLLOW_UP_REASON_LABELS, FOLLOW_UP_STATUS_LABELS, isOverdue, isToday } from '../utils/format';
 import { exportToCSV } from '../utils/storage';

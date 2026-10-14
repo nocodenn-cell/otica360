@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useReducer, useCallback, useRef, ReactNode } from 'react';
+import { createContext, useContext, useReducer, useCallback, useRef, useState, type ReactNode } from 'react';
 import { AppState, Customer, Product, Sale, Lead, Quote, FollowUpTask, MarketingCampaign, MessageEvent } from '../types';
 import { loadState, saveState, addCustomer as addCustomerStore, updateCustomer as updateCustomerStore, addProduct as addProductStore, updateProduct as updateProductStore, addSale as addSaleStore, updateSaleStatus as updateSaleStatusStore, addLead as addLeadStore, updateLead as updateLeadStore, addQuote as addQuoteStore, updateQuote as updateQuoteStore, addFollowUp as addFollowUpStore, updateFollowUp as updateFollowUpStore, addCampaign as addCampaignStore, updateCampaign as updateCampaignStore, addMessageEvent as addMessageEventStore } from '../utils/storage';
 
@@ -125,7 +125,7 @@ const AppContext = createContext<AppContextType | null>(null);
 
 export function AppProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(reducer, null, () => loadState());
-  const [toast, setToast] = React.useState('');
+  const [toast, setToast] = useState('');
   const toastTimeoutRef = useRef<ReturnType<typeof setTimeout>>();
 
   const showToast = useCallback((msg: string) => {

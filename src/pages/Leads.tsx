@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import { useApp } from '../contexts/AppContext';
 import { formatCurrency, formatDate, STAGE_LABELS, STAGE_COLORS, ORIGIN_LABELS, LOSS_REASON_LABELS, isOverdue } from '../utils/format';
 import { Lead, LeadStage, CustomerOrigin, LossReason, QuoteItem } from '../types';
