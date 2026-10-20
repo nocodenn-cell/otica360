@@ -12,20 +12,29 @@ import {
   getTodayStr,
 } from '../src/utils/format';
 
+// O Intl usa NBSP (U+00A0) como separador entre símbolo e valor na pt-BR.
+// Normalizamos o resultado para espaço ASCII antes de comparar, sem alterar
+// a formatação real exibida ao usuário (preserva agrupamento e vírgula decimal).
+const normalize = (value: string) => value.replace(/\u00A0/g, ' ');
+
 describe('formatCurrency', () => {
   it('formata valores em BRL corretamente', () => {
-    expect(formatCurrency(0)).toBe('R$ 0,00');
-    expect(formatCurrency(100)).toBe('R$ 100,00');
-    expect(formatCurrency(1234.56)).toBe('R$ 1.234,56');
-    expect(formatCurrency(0.5)).toBe('R$ 0,50');
+    expect(normalize(formatCurrency(0))).toBe('R$ 0,00');
+    expect(normalize(formatCurrency(100))).toBe('R$ 100,00');
+    expect(normalize(formatCurrency(1234.56))).toBe('R$ 1.234,56');
+    expect(normalize(formatCurrency(0.5))).toBe('R$ 0,50');
   });
 
   it('formata valores negativos', () => {
-    expect(formatCurrency(-100)).toBe('-R$ 100,00');
+    expect(normalize(formatCurrency(-100))).toBe('-R$ 100,00');
   });
 
   it('formata valores grandes', () => {
-    expect(formatCurrency(1000000)).toBe('R$ 1.000.000,00');
+    expect(normalize(formatCurrency(1000000))).toBe('R$ 1.000.000,00');
+  });
+
+  it('não usa espaço separável entre símbolo e valor', () => {
+    expect(formatCurrency(100)).toContain('\u00A0');
   });
 });
 
