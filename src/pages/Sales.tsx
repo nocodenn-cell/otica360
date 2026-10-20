@@ -3,6 +3,7 @@ import { useApp } from '../contexts/AppContext';
 import { formatCurrency, formatDate, formatPhone, PAYMENT_LABELS, SALE_STATUS_LABELS, ORIGIN_LABELS, generateSaleNumber, getTodayStr } from '../utils/format';
 import { Sale, SaleItem, PaymentMethod, SaleStatus, CustomerOrigin } from '../types';
 import { Plus, Search, X, ShoppingCart, Trash2 } from 'lucide-react';
+import { validateSaleItems } from '../utils/saleValidation';
 
 export default function Sales() {
   const { state, addSale, updateSaleStatus, showToast } = useApp();
@@ -22,7 +23,7 @@ export default function Sales() {
   const total = Math.max(0, subtotal - form.discount);
 
   const addItem = () => {
-    if (!selectedProductId) return;
+    if (!selectedProductId || !Number.isInteger(selectedQty) || selectedQty <= 0) { showToast('Informe uma quantidade válida.'); return; }
     const product = state.products.find(p => p.id === selectedProductId);
     if (!product) return;
     const existing = saleItems.find(i => i.productId === selectedProductId);
@@ -43,6 +44,8 @@ export default function Sales() {
   const handleSave = () => {
     if (saleItems.length === 0) { showToast('Adicione pelo menos um item.'); return; }
     if (!form.date) { showToast('Informe a data da venda.'); return; }
+    const validationError = validateSaleItems(saleItems, form.discount);
+    if (validationError) { showToast(validationError); return; }
 
     const saleNumber = generateSaleNumber(state.sales);
     addSale({
