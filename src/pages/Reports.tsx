@@ -1,11 +1,13 @@
 import React, { useState, useMemo } from 'react';
 import { useApp } from '../contexts/AppContext';
+import { useAuth } from '../contexts/AuthContext';
 import { formatCurrency, formatDate, formatPhone, ORIGIN_LABELS, PAYMENT_LABELS, SALE_STATUS_LABELS, FOLLOW_UP_REASON_LABELS, FOLLOW_UP_STATUS_LABELS, isOverdue, isToday } from '../utils/format';
 import { exportToCSV } from '../utils/storage';
 import { Download, FileText, AlertTriangle, CalendarCheck, Users, ShoppingCart } from 'lucide-react';
 
 export default function Reports() {
   const { state, showToast } = useApp();
+  const { can } = useAuth();
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
 
@@ -107,9 +109,11 @@ export default function Reports() {
       <div className="bg-white rounded-xl border border-gray-100 p-5 shadow-sm">
         <div className="flex items-center justify-between mb-4">
           <h3 className="font-semibold text-gray-800">Relatório de Vendas</h3>
-          <button onClick={exportSales} className="flex items-center gap-1 px-3 py-1.5 text-sm bg-green-50 text-green-700 rounded-lg hover:bg-green-100">
-            <Download className="w-4 h-4" /> Exportar CSV
-          </button>
+          {can('export') && (
+            <button onClick={exportSales} className="flex items-center gap-1 px-3 py-1.5 text-sm bg-green-50 text-green-700 rounded-lg hover:bg-green-100">
+              <Download className="w-4 h-4" /> Exportar CSV
+            </button>
+          )}
         </div>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
           <div className="bg-gray-50 rounded-lg p-3">
@@ -150,9 +154,11 @@ export default function Reports() {
       <div className="bg-white rounded-xl border border-gray-100 p-5 shadow-sm">
         <div className="flex items-center justify-between mb-4">
           <h3 className="font-semibold text-gray-800">Relatório de Clientes</h3>
-          <button onClick={exportCustomers} className="flex items-center gap-1 px-3 py-1.5 text-sm bg-green-50 text-green-700 rounded-lg hover:bg-green-100">
-            <Download className="w-4 h-4" /> Exportar CSV
-          </button>
+          {can('export') && (
+            <button onClick={exportCustomers} className="flex items-center gap-1 px-3 py-1.5 text-sm bg-green-50 text-green-700 rounded-lg hover:bg-green-100">
+              <Download className="w-4 h-4" /> Exportar CSV
+            </button>
+          )}
         </div>
         <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-4">
           <div className="bg-gray-50 rounded-lg p-3">

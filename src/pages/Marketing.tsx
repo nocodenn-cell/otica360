@@ -1,18 +1,21 @@
 import React, { useState } from 'react';
 import { useApp } from '../contexts/AppContext';
+import { useAuth } from '../contexts/AuthContext';
 import { formatCurrency, formatDate } from '../utils/format';
 import { MarketingCampaign } from '../types';
 import { Plus, X, Megaphone, TrendingUp } from 'lucide-react';
 
 export default function Marketing() {
   const { state, addCampaign, updateCampaign, showToast } = useApp();
+  const { can } = useAuth();
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState({ name: '', platform: '', startDate: '', endDate: '', investment: 0, leadsGenerated: 0, quotesRelated: 0, salesAttributed: 0, revenueAttributed: 0, notes: '' });
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!form.name.trim()) { showToast('Nome é obrigatório.'); return; }
     if (!form.startDate) { showToast('Data de início é obrigatória.'); return; }
-    addCampaign(form);
+    const ok = await addCampaign(form);
+    if (!ok) return;
     setShowForm(false);
     setForm({ name: '', platform: '', startDate: '', endDate: '', investment: 0, leadsGenerated: 0, quotesRelated: 0, salesAttributed: 0, revenueAttributed: 0, notes: '' });
   };
@@ -26,9 +29,11 @@ export default function Marketing() {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
         <h2 className="text-2xl font-bold text-gray-800">Marketing & Atribuição</h2>
-        <button onClick={() => setShowForm(true)} className="flex items-center gap-1 px-3 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700">
-          <Plus className="w-4 h-4" /> Nova Campanha
-        </button>
+        {can('create') && (
+          <button onClick={() => setShowForm(true)} className="flex items-center gap-1 px-3 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+            <Plus className="w-4 h-4" /> Nova Campanha
+          </button>
+        )}
       </div>
 
       {/* Info Banner */}

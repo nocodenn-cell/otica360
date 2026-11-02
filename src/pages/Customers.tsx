@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useApp } from '../contexts/AppContext';
+import { useAuth } from '../contexts/AuthContext';
 import { formatPhone, formatDate, ORIGIN_LABELS, isValidPhone, isValidEmail, maskPhone } from '../utils/format';
 import { findDuplicateCustomers, parseCSV } from '../utils/storage';
 import { Customer, CustomerOrigin, ContactPreference, CommunicationStatus } from '../types';
@@ -9,6 +10,7 @@ import { exportToCSV } from '../utils/storage';
 
 export default function Customers() {
   const { state, addCustomer, updateCustomer, importCustomers, showToast } = useApp();
+  const { can } = useAuth();
   const navigate = useNavigate();
   const [search, setSearch] = useState('');
   const [showForm, setShowForm] = useState(false);
@@ -22,7 +24,7 @@ export default function Customers() {
     return state.customers.filter(c => !c.archived && (c.name.toLowerCase().includes(q) || c.phone.includes(q) || c.email.toLowerCase().includes(q)));
   }, [state.customers, search]);
 
-  const handleSave = () => {
+  const handleSave = async () => {
     const errs: string[] = [];
     if (!form.name.trim()) errs.push('Nome é obrigatório');
     if (!isValidPhone(form.phone)) errs.push('Telefone inválido');
@@ -37,8 +39,8 @@ export default function Customers() {
 
     const customerData = { ...form, lastPurchaseDate: null as string | null, nextActionDate: null as string | null, archived: false };
     if (editingId) {
-      updateCustomer(editingId, form);
-      showToast('Cliente atualizado!');
+      const ok = await updateCustomer(editingId, form);
+      if (ok) showToast('Cliente atualizado!');
     } else {
       addCustomer(customerData);
     }
@@ -58,10 +60,10 @@ export default function Customers() {
     setShowForm(true);
   };
 
-  const handleArchive = (id: string) => {
+  const handleArchive = async (id: string) => {
     if (window.confirm('Arquivar este cliente?')) {
-      updateCustomer(id, { archived: true });
-      showToast('Cliente arquivado.');
+      const ok = await updateCustomer(id, { archived: true });
+      if (ok) showToast('Cliente arquivado.');
     }
   };
 
@@ -82,15 +84,21 @@ export default function Customers() {
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
         <h2 className="text-2xl font-bold text-gray-800">Clientes</h2>
         <div className="flex gap-2 flex-wrap">
-          <button onClick={() => setShowImport(true)} className="flex items-center gap-1 px-3 py-2 text-sm bg-white border border-gray-200 rounded-lg hover:bg-gray-50">
-            <Upload className="w-4 h-4" /> Importar CSV
-          </button>
-          <button onClick={handleExport} className="flex items-center gap-1 px-3 py-2 text-sm bg-white border border-gray-200 rounded-lg hover:bg-gray-50">
-            <Download className="w-4 h-4" /> Exportar
-          </button>
-          <button onClick={() => setShowForm(true)} className="flex items-center gap-1 px-3 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700">
-            <Plus className="w-4 h-4" /> Novo Cliente
-          </button>
+          {can('create') && (
+            <button onClick={() => setShowImport(true)} className="flex items-center gap-1 px-3 py-2 text-sm bg-white border border-gray-200 rounded-lg hover:bg-gray-50">
+              <Upload className="w-4 h-4" /> Importar CSV
+            </button>
+          )}
+          {can('export') && (
+            <button onClick={handleExport} className="flex items-center gap-1 px-3 py-2 text-sm bg-white border border-gray-200 rounded-lg hover:bg-gray-50">
+              <Download className="w-4 h-4" /> Exportar
+            </button>
+          )}
+          {can('create') && (
+            <button onClick={() => setShowForm(true)} className="flex items-center gap-1 px-3 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+              <Plus className="w-4 h-4" /> Novo Cliente
+            </button>
+          )}
         </div>
       </div>
 
@@ -226,7 +234,7 @@ export default function Customers() {
   );
 }
 
-function ImportModal({ onClose, onImport, showToast }: { onClose: () => void; onImport: (customers: any[]) => void; showToast: (msg: string) => void }) {
+function ImportModal({ onClose, onImport, showToast }: { onClose: () => void; onImport: (customers: any[]) => Promise<boolean>; showToast: (msg: string) => void }) {
   const [csvText, setCsvText] = useState('');
   const [preview, setPreview] = useState<{ headers: string[]; rows: string[][] } | null>(null);
   const [mapping, setMapping] = useState<Record<string, string>>({});
@@ -255,7 +263,7 @@ function ImportModal({ onClose, onImport, showToast }: { onClose: () => void; on
     reader.readAsText(file);
   };
 
-  const handleImport = () => {
+  const handleImport = async () => {
     if (!preview) return;
     const errs: string[] = [];
     const customers: any[] = [];
@@ -282,7 +290,8 @@ function ImportModal({ onClose, onImport, showToast }: { onClose: () => void; on
     });
     if (errs.length > 0) { setImportErrors(errs); return; }
     if (customers.length === 0) { showToast('Nenhum cliente válido encontrado.'); return; }
-    onImport(customers);
+    const ok = await onImport(customers);
+    if (!ok) return;
     onClose();
   };
 

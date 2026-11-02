@@ -23,7 +23,7 @@ interface LayoutProps {
 
 export default function Layout({ onLogout, user }: LayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const { toast } = useApp();
+  const { toast, dataStatus } = useApp();
 
   return (
     <div className="min-h-screen bg-gray-50 flex">
@@ -60,8 +60,8 @@ export default function Layout({ onLogout, user }: LayoutProps) {
         </nav>
         <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-gray-100">
           <div className="flex items-center gap-2 text-xs text-gray-400">
-            <div className="w-2 h-2 rounded-full bg-green-400"></div>
-            Modo demonstração — dados locais
+            <div className={`w-2 h-2 rounded-full ${dataStatus === 'demo' ? 'bg-green-400' : 'bg-blue-500'}`}></div>
+            {dataStatus === 'demo' ? 'Modo demonstração — dados locais' : 'Modo servidor — dados da organização'}
           </div>
         </div>
       </aside>

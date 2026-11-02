@@ -1,14 +1,10 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Eye } from 'lucide-react';
-import { signInDemo, getAuthMode } from '../utils/auth';
-import { UserProfile } from '../types';
+import { useAuth } from '../contexts/AuthContext';
 
-interface LoginPageProps {
-  onLogin: (user: UserProfile) => void;
-}
-
-export default function LoginPage({ onLogin }: LoginPageProps) {
+export default function LoginPage() {
+  const { signIn, mode } = useAuth();
   const navigate = useNavigate();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -21,20 +17,13 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
     setLoading(true);
 
     try {
-      const mode = getAuthMode();
-      if (mode === 'demo') {
-        const result = await signInDemo(email, password);
-        if (result.error) {
-          setError(result.error);
-        } else if (result.user) {
-          onLogin(result.user);
-          navigate('/');
-        }
+      const result = await signIn(email, password);
+      if (result.ok) {
+        navigate('/', { replace: true });
       } else {
-        // TODO: Implementar Supabase Auth
-        setError('Autenticação Supabase ainda não configurada.');
+        setError(result.error ?? 'Falha ao autenticar.');
       }
-    } catch (err) {
+    } catch {
       setError('Erro ao fazer login. Tente novamente.');
     } finally {
       setLoading(false);
@@ -55,12 +44,14 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
             Sistema de Gestão Comercial para Óticas
           </p>
 
-          {/* Demo Mode Banner */}
-          <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 mb-6">
-            <p className="text-xs text-amber-800 text-center">
-              <strong>Modo Demonstração</strong> — Use qualquer e-mail para entrar
-            </p>
-          </div>
+          {/* Demo Mode Banner — apenas em desenvolvimento */}
+          {mode === 'demo' && (
+            <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 mb-6">
+              <p className="text-xs text-amber-800 text-center">
+                <strong>Modo Demonstração (desenvolvimento)</strong> — qualquer e-mail e senha entram
+              </p>
+            </div>
+          )}
 
           {/* Form */}
           <form onSubmit={handleSubmit} className="space-y-4">
@@ -101,6 +92,14 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
             >
               {loading ? 'Entrando...' : 'Entrar'}
             </button>
+
+            {mode === 'supabase' && (
+              <p className="text-sm text-center">
+                <Link to="/recuperar-senha" className="text-blue-600 hover:underline">
+                  Esqueci minha senha
+                </Link>
+              </p>
+            )}
           </form>
 
           {/* Footer */}

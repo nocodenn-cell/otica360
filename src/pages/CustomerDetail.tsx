@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useApp } from '../contexts/AppContext';
+import { useAuth } from '../contexts/AuthContext';
 import { formatPhone, formatDate, formatCurrency, ORIGIN_LABELS, FOLLOW_UP_REASON_LABELS, FOLLOW_UP_STATUS_LABELS } from '../utils/format';
 import { ArrowLeft, Edit2, Phone, Mail, Plus, CalendarCheck } from 'lucide-react';
 import { FollowUpReason, ContactPreference, FollowUpStatus } from '../types';
@@ -9,6 +10,7 @@ export default function CustomerDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { state, addFollowUp, showToast } = useApp();
+  const { can } = useAuth();
   const [showFollowUpForm, setShowFollowUpForm] = useState(false);
   const [followUpForm, setFollowUpForm] = useState({ reason: 'post_purchase' as FollowUpReason, description: '', channel: 'whatsapp' as ContactPreference, scheduledDate: '', responsible: '' });
 
@@ -19,9 +21,9 @@ export default function CustomerDetail() {
   const customerFollowUps = state.followUps.filter(f => f.customerId === id).sort((a, b) => b.scheduledDate.localeCompare(a.scheduledDate));
   const customerQuotes = state.quotes.filter(q => q.customerId === id);
 
-  const handleCreateFollowUp = () => {
+  const handleCreateFollowUp = async () => {
     if (!followUpForm.scheduledDate) { showToast('Informe a data agendada.'); return; }
-    addFollowUp({
+    const ok = await addFollowUp({
       customerId: customer.id,
       customerName: customer.name,
       reason: followUpForm.reason,
@@ -33,6 +35,7 @@ export default function CustomerDetail() {
       result: '',
       nextActionDate: null,
     });
+    if (!ok) return;
     setShowFollowUpForm(false);
     setFollowUpForm({ reason: 'post_purchase', description: '', channel: 'whatsapp', scheduledDate: '', responsible: '' });
   };
@@ -69,9 +72,11 @@ export default function CustomerDetail() {
 
       {/* Actions */}
       <div className="flex gap-2">
-        <button onClick={() => setShowFollowUpForm(true)} className="flex items-center gap-1 px-3 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700">
-          <CalendarCheck className="w-4 h-4" /> Nova Tarefa
-        </button>
+        {can('create') && (
+          <button onClick={() => setShowFollowUpForm(true)} className="flex items-center gap-1 px-3 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+            <CalendarCheck className="w-4 h-4" /> Nova Tarefa
+          </button>
+        )}
       </div>
 
       {/* Sales History */}

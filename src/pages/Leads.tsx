@@ -1,12 +1,15 @@
 import React, { useState, useMemo } from 'react';
 import { useApp } from '../contexts/AppContext';
+import { useAuth } from '../contexts/AuthContext';
 import { formatCurrency, formatDate, STAGE_LABELS, STAGE_COLORS, ORIGIN_LABELS, LOSS_REASON_LABELS, isOverdue } from '../utils/format';
+import { findCustomerByPhone } from '../utils/leadConversion';
 import { Lead, LeadStage, CustomerOrigin, LossReason, QuoteItem } from '../types';
 import { Plus, X, Target, ChevronRight, AlertTriangle, FileText } from 'lucide-react';
 import { v4 as uuid } from 'uuid';
 
 export default function Leads() {
-  const { state, addLead, updateLead, addQuote, addCustomer, showToast } = useApp();
+  const { state, getState, addLead, updateLead, addQuote, addCustomer, showToast } = useApp();
+  const { can } = useAuth();
   const [showLeadForm, setShowLeadForm] = useState(false);
   const [showQuoteForm, setShowQuoteForm] = useState(false);
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
@@ -25,38 +28,39 @@ export default function Leads() {
     return map;
   }, [state.leads]);
 
-  const handleSaveLead = () => {
+  const handleSaveLead = async () => {
     if (!leadForm.name.trim()) { showToast('Nome é obrigatório.'); return; }
-    addLead({ ...leadForm, stage: 'new_contact', lossReason: null, customerId: null });
+    const ok = await addLead({ ...leadForm, stage: 'new_contact', lossReason: null, customerId: null });
+    if (!ok) return;
     setLeadForm({ name: '', phone: '', email: '', origin: 'unknown', estimatedValue: 0, responsible: '', nextContactDate: '', notes: '' });
     setShowLeadForm(false);
   };
 
-  const handleStageChange = (lead: Lead, newStage: LeadStage) => {
-    updateLead(lead.id, { stage: newStage });
+  const convertLeadToCustomer = async (lead: Lead): Promise<'linked' | 'created' | 'failed'> => {
+    if (lead.customerId) return 'linked';
+    const existing = findCustomerByPhone(getState().customers, lead);
+    if (existing) {
+      return (await updateLead(lead.id, { customerId: existing.id })) ? 'linked' : 'failed';
+    }
+    const ok = await addCustomer({ name: lead.name, phone: lead.phone, email: lead.email, origin: lead.origin, contactPreference: 'whatsapp', communicationStatus: 'pending', notes: lead.notes, lastPurchaseDate: null, nextActionDate: null, responsible: lead.responsible, archived: false });
+    if (!ok) return 'failed';
+    const created = findCustomerByPhone(getState().customers, lead);
+    if (!created) return 'failed';
+    return (await updateLead(lead.id, { customerId: created.id })) ? 'created' : 'failed';
+  };
+
+  const handleStageChange = async (lead: Lead, newStage: LeadStage) => {
+    const ok = await updateLead(lead.id, { stage: newStage });
+    if (!ok) return;
     if (newStage === 'won') {
-      // Convert to customer if not already
-      if (!lead.customerId) {
-        const existing = state.customers.find(c => c.phone.replace(/\D/g, '') === lead.phone.replace(/\D/g, ''));
-        if (existing) {
-          updateLead(lead.id, { customerId: existing.id });
-        } else {
-          addCustomer({ name: lead.name, phone: lead.phone, email: lead.email, origin: lead.origin, contactPreference: 'whatsapp', communicationStatus: 'pending', notes: lead.notes, lastPurchaseDate: null, nextActionDate: null, responsible: lead.responsible, archived: false });
-        }
-      }
-      showToast('Lead convertido em venda!');
+      const outcome = await convertLeadToCustomer(lead);
+      if (outcome !== 'failed') showToast('Lead convertido em venda!');
     }
   };
 
-  const handleConvertToCustomer = (lead: Lead) => {
-    const existing = state.customers.find(c => c.phone.replace(/\D/g, '') === lead.phone.replace(/\D/g, ''));
-    if (existing) {
-      updateLead(lead.id, { customerId: existing.id });
-      showToast('Lead vinculado ao cliente existente.');
-    } else {
-      addCustomer({ name: lead.name, phone: lead.phone, email: lead.email, origin: lead.origin, contactPreference: 'whatsapp', communicationStatus: 'pending', notes: lead.notes, lastPurchaseDate: null, nextActionDate: null, responsible: lead.responsible, archived: false });
-      showToast('Lead convertido em cliente!');
-    }
+  const handleConvertToCustomer = async (lead: Lead) => {
+    const outcome = await convertLeadToCustomer(lead);
+    if (outcome === 'linked') showToast('Lead vinculado ao cliente existente.');
   };
 
   const addQuoteItem = () => {
@@ -69,10 +73,10 @@ export default function Leads() {
     setQuoteQty(1);
   };
 
-  const handleSaveQuote = () => {
+  const handleSaveQuote = async () => {
     if (!selectedLead || quoteItems.length === 0) return;
     const sub = quoteItems.reduce((s, i) => s + i.total, 0);
-    addQuote({
+    const ok = await addQuote({
       leadId: selectedLead.id,
       customerId: selectedLead.customerId,
       customerName: selectedLead.name,
@@ -84,20 +88,22 @@ export default function Leads() {
       validUntil: new Date(Date.now() + 15 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
       notes: '',
     });
-    updateLead(selectedLead.id, { stage: 'quote_sent' });
+    if (!ok) return;
+    await updateLead(selectedLead.id, { stage: 'quote_sent' });
     setShowQuoteForm(false);
     setQuoteItems([]);
     setQuoteDiscount(0);
-    showToast('Orçamento criado e enviado!');
   };
 
   return (
     <div className="space-y-4">
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
         <h2 className="text-2xl font-bold text-gray-800">Leads & Orçamentos</h2>
-        <button onClick={() => setShowLeadForm(true)} className="flex items-center gap-1 px-3 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700">
-          <Plus className="w-4 h-4" /> Novo Lead
-        </button>
+        {can('create') && (
+          <button onClick={() => setShowLeadForm(true)} className="flex items-center gap-1 px-3 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+            <Plus className="w-4 h-4" /> Novo Lead
+          </button>
+        )}
       </div>
 
       {/* Pipeline View */}
@@ -180,10 +186,12 @@ export default function Leads() {
 
               {/* Actions */}
               <div className="border-t pt-3 flex flex-wrap gap-2">
-                <button onClick={() => { setShowQuoteForm(true); }} className="flex items-center gap-1 px-3 py-2 text-sm bg-purple-600 text-white rounded-lg hover:bg-purple-700">
-                  <FileText className="w-4 h-4" /> Criar Orçamento
-                </button>
-                {!selectedLead.customerId && (
+                {can('create') && (
+                  <button onClick={() => { setShowQuoteForm(true); }} className="flex items-center gap-1 px-3 py-2 text-sm bg-purple-600 text-white rounded-lg hover:bg-purple-700">
+                    <FileText className="w-4 h-4" /> Criar Orçamento
+                  </button>
+                )}
+                {!selectedLead.customerId && can('create') && (
                   <button onClick={() => { handleConvertToCustomer(selectedLead); setSelectedLead(null); }} className="flex items-center gap-1 px-3 py-2 text-sm bg-green-600 text-white rounded-lg hover:bg-green-700">
                     <Target className="w-4 h-4" /> Converter em Cliente
                   </button>
