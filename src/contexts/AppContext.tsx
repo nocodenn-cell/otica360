@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useCallback, useRef, ReactNode } from 'react';
 import { AppState, Customer, Product, Sale, Lead, Quote, FollowUpTask, MarketingCampaign, MessageEvent } from '../types';
+import { useAuth, PermissionAction } from './AuthContext';
 import { loadState, saveState, addCustomer as addCustomerStore, updateCustomer as updateCustomerStore, addProduct as addProductStore, updateProduct as updateProductStore, addSale as addSaleStore, updateSaleStatus as updateSaleStatusStore, addLead as addLeadStore, updateLead as updateLeadStore, addQuote as addQuoteStore, updateQuote as updateQuoteStore, addFollowUp as addFollowUpStore, updateFollowUp as updateFollowUpStore, addCampaign as addCampaignStore, updateCampaign as updateCampaignStore, addMessageEvent as addMessageEventStore } from '../utils/storage';
 
 // Use functional updates to avoid stale closure issues
@@ -126,12 +127,21 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const stateRef = useRef(state);
   const [toast, setToast] = React.useState('');
   const toastTimeoutRef = useRef<ReturnType<typeof setTimeout>>();
+  const { can } = useAuth();
 
   const showToast = useCallback((msg: string) => {
     setToast(msg);
     if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current);
     toastTimeoutRef.current = setTimeout(() => setToast(''), 3000);
   }, []);
+
+  const guard = useCallback((action: PermissionAction): boolean => {
+    if (!can(action)) {
+      showToast('Você não tem permissão para esta ação.');
+      return false;
+    }
+    return true;
+  }, [can, showToast]);
 
   // Persist synchronously before publishing the new state or confirming success.
   // A ref keeps consecutive operations based on the latest committed state.
@@ -153,81 +163,81 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   // All dispatches use action objects — no stale closures
   const addCustomer = useCallback((c: Omit<Customer, 'id' | 'organizationId' | 'createdAt' | 'updatedAt'>) => {
-    if (dispatch({ type: 'ADD_CUSTOMER', customer: c })) {
+    if (guard('create') && dispatch({ type: 'ADD_CUSTOMER', customer: c })) {
     showToast('Cliente cadastrado com sucesso!'); }
-  }, [showToast]);
+  }, [guard, showToast]);
 
   const updateCustomer = useCallback((id: string, u: Partial<Customer>) => {
-    dispatch({ type: 'UPDATE_CUSTOMER', id, updates: u });
-  }, []);
+    if (guard('edit')) dispatch({ type: 'UPDATE_CUSTOMER', id, updates: u });
+  }, [guard]);
 
   const addProduct = useCallback((p: Omit<Product, 'id' | 'organizationId' | 'createdAt' | 'updatedAt'>) => {
-    if (dispatch({ type: 'ADD_PRODUCT', product: p })) {
+    if (guard('create') && dispatch({ type: 'ADD_PRODUCT', product: p })) {
     showToast('Produto cadastrado!'); }
-  }, [showToast]);
+  }, [guard, showToast]);
 
   const updateProduct = useCallback((id: string, u: Partial<Product>) => {
-    dispatch({ type: 'UPDATE_PRODUCT', id, updates: u });
-  }, []);
+    if (guard('edit')) dispatch({ type: 'UPDATE_PRODUCT', id, updates: u });
+  }, [guard]);
 
   const addSale = useCallback((s: Omit<Sale, 'id' | 'organizationId' | 'createdAt' | 'updatedAt'>) => {
-    if (dispatch({ type: 'ADD_SALE', sale: s })) {
+    if (guard('create') && dispatch({ type: 'ADD_SALE', sale: s })) {
     showToast('Venda registrada!'); }
-  }, [showToast]);
+  }, [guard, showToast]);
 
   const updateSaleStatus = useCallback((id: string, status: Sale['status']) => {
-    if (dispatch({ type: 'UPDATE_SALE_STATUS', id, status })) {
+    if (guard('edit') && dispatch({ type: 'UPDATE_SALE_STATUS', id, status })) {
     showToast('Status atualizado!'); }
-  }, [showToast]);
+  }, [guard, showToast]);
 
   const addLead = useCallback((l: Omit<Lead, 'id' | 'organizationId' | 'createdAt' | 'updatedAt'>) => {
-    if (dispatch({ type: 'ADD_LEAD', lead: l })) {
+    if (guard('create') && dispatch({ type: 'ADD_LEAD', lead: l })) {
     showToast('Lead cadastrado!'); }
-  }, [showToast]);
+  }, [guard, showToast]);
 
   const updateLead = useCallback((id: string, u: Partial<Lead>) => {
-    dispatch({ type: 'UPDATE_LEAD', id, updates: u });
-  }, []);
+    if (guard('edit')) dispatch({ type: 'UPDATE_LEAD', id, updates: u });
+  }, [guard]);
 
   const addQuote = useCallback((q: Omit<Quote, 'id' | 'organizationId' | 'createdAt' | 'updatedAt'>) => {
-    if (dispatch({ type: 'ADD_QUOTE', quote: q })) {
+    if (guard('create') && dispatch({ type: 'ADD_QUOTE', quote: q })) {
     showToast('Orçamento criado!'); }
-  }, [showToast]);
+  }, [guard, showToast]);
 
   const updateQuote = useCallback((id: string, u: Partial<Quote>) => {
-    dispatch({ type: 'UPDATE_QUOTE', id, updates: u });
-  }, []);
+    if (guard('edit')) dispatch({ type: 'UPDATE_QUOTE', id, updates: u });
+  }, [guard]);
 
   const addFollowUp = useCallback((f: Omit<FollowUpTask, 'id' | 'organizationId' | 'createdAt' | 'updatedAt'>) => {
-    if (dispatch({ type: 'ADD_FOLLOW_UP', task: f })) {
+    if (guard('create') && dispatch({ type: 'ADD_FOLLOW_UP', task: f })) {
     showToast('Tarefa criada!'); }
-  }, [showToast]);
+  }, [guard, showToast]);
 
   const updateFollowUp = useCallback((id: string, u: Partial<FollowUpTask>) => {
-    dispatch({ type: 'UPDATE_FOLLOW_UP', id, updates: u });
-  }, []);
+    if (guard('edit')) dispatch({ type: 'UPDATE_FOLLOW_UP', id, updates: u });
+  }, [guard]);
 
   const addCampaign = useCallback((c: Omit<MarketingCampaign, 'id' | 'organizationId' | 'createdAt' | 'updatedAt'>) => {
-    if (dispatch({ type: 'ADD_CAMPAIGN', campaign: c })) {
+    if (guard('create') && dispatch({ type: 'ADD_CAMPAIGN', campaign: c })) {
     showToast('Campanha criada!'); }
-  }, [showToast]);
+  }, [guard, showToast]);
 
   const updateCampaign = useCallback((id: string, u: Partial<MarketingCampaign>) => {
-    dispatch({ type: 'UPDATE_CAMPAIGN', id, updates: u });
-  }, []);
+    if (guard('edit')) dispatch({ type: 'UPDATE_CAMPAIGN', id, updates: u });
+  }, [guard]);
 
   const addMessageEvent = useCallback((e: Omit<MessageEvent, 'id' | 'organizationId' | 'createdAt'>) => {
-    dispatch({ type: 'ADD_MESSAGE_EVENT', event: e });
-  }, []);
+    if (guard('create')) dispatch({ type: 'ADD_MESSAGE_EVENT', event: e });
+  }, [guard]);
 
   const importCustomers = useCallback((customers: Omit<Customer, 'id' | 'organizationId' | 'createdAt' | 'updatedAt'>[]) => {
-    if (dispatch({ type: 'IMPORT_CUSTOMERS', customers })) {
+    if (guard('create') && dispatch({ type: 'IMPORT_CUSTOMERS', customers })) {
     showToast(`${customers.length} cliente(s) importado(s)!`); }
-  }, [showToast]);
+  }, [guard, showToast]);
 
   const setState = useCallback((s: AppState) => {
-    dispatch({ type: 'SET_STATE', payload: s });
-  }, []);
+    if (guard('admin')) dispatch({ type: 'SET_STATE', payload: s });
+  }, [guard]);
 
   const value: AppContextType = {
     state, toast, showToast,

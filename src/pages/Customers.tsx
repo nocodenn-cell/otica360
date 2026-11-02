@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useApp } from '../contexts/AppContext';
+import { useAuth } from '../contexts/AuthContext';
 import { formatPhone, formatDate, ORIGIN_LABELS, isValidPhone, isValidEmail, maskPhone } from '../utils/format';
 import { findDuplicateCustomers, parseCSV } from '../utils/storage';
 import { Customer, CustomerOrigin, ContactPreference, CommunicationStatus } from '../types';
@@ -9,6 +10,7 @@ import { exportToCSV } from '../utils/storage';
 
 export default function Customers() {
   const { state, addCustomer, updateCustomer, importCustomers, showToast } = useApp();
+  const { can } = useAuth();
   const navigate = useNavigate();
   const [search, setSearch] = useState('');
   const [showForm, setShowForm] = useState(false);
@@ -82,15 +84,21 @@ export default function Customers() {
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
         <h2 className="text-2xl font-bold text-gray-800">Clientes</h2>
         <div className="flex gap-2 flex-wrap">
-          <button onClick={() => setShowImport(true)} className="flex items-center gap-1 px-3 py-2 text-sm bg-white border border-gray-200 rounded-lg hover:bg-gray-50">
-            <Upload className="w-4 h-4" /> Importar CSV
-          </button>
-          <button onClick={handleExport} className="flex items-center gap-1 px-3 py-2 text-sm bg-white border border-gray-200 rounded-lg hover:bg-gray-50">
-            <Download className="w-4 h-4" /> Exportar
-          </button>
-          <button onClick={() => setShowForm(true)} className="flex items-center gap-1 px-3 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700">
-            <Plus className="w-4 h-4" /> Novo Cliente
-          </button>
+          {can('create') && (
+            <button onClick={() => setShowImport(true)} className="flex items-center gap-1 px-3 py-2 text-sm bg-white border border-gray-200 rounded-lg hover:bg-gray-50">
+              <Upload className="w-4 h-4" /> Importar CSV
+            </button>
+          )}
+          {can('export') && (
+            <button onClick={handleExport} className="flex items-center gap-1 px-3 py-2 text-sm bg-white border border-gray-200 rounded-lg hover:bg-gray-50">
+              <Download className="w-4 h-4" /> Exportar
+            </button>
+          )}
+          {can('create') && (
+            <button onClick={() => setShowForm(true)} className="flex items-center gap-1 px-3 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+              <Plus className="w-4 h-4" /> Novo Cliente
+            </button>
+          )}
         </div>
       </div>
 

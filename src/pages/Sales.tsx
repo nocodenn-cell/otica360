@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { useApp } from '../contexts/AppContext';
+import { useAuth } from '../contexts/AuthContext';
 import { formatCurrency, formatDate, formatPhone, PAYMENT_LABELS, SALE_STATUS_LABELS, ORIGIN_LABELS, generateSaleNumber, getTodayStr } from '../utils/format';
 import { Sale, SaleItem, PaymentMethod, SaleStatus, CustomerOrigin } from '../types';
 import { Plus, Search, X, ShoppingCart, Trash2 } from 'lucide-react';
@@ -7,6 +8,7 @@ import { validateSaleItems } from '../utils/saleValidation';
 
 export default function Sales() {
   const { state, addSale, updateSaleStatus, showToast } = useApp();
+  const { can } = useAuth();
   const [search, setSearch] = useState('');
   const [showForm, setShowForm] = useState(false);
   const [saleItems, setSaleItems] = useState<SaleItem[]>([]);
@@ -82,9 +84,11 @@ export default function Sales() {
     <div className="space-y-4">
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
         <h2 className="text-2xl font-bold text-gray-800">Vendas</h2>
-        <button onClick={() => setShowForm(true)} className="flex items-center gap-1 px-3 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700">
-          <Plus className="w-4 h-4" /> Nova Venda
-        </button>
+        {can('create') && (
+          <button onClick={() => setShowForm(true)} className="flex items-center gap-1 px-3 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+            <Plus className="w-4 h-4" /> Nova Venda
+          </button>
+        )}
       </div>
 
       <div className="relative">
@@ -127,7 +131,7 @@ export default function Sales() {
                       </span>
                     </td>
                     <td className="px-4 py-3">
-                      {s.status === 'completed' && (
+                      {s.status === 'completed' && can('edit') && (
                         <button onClick={() => handleCancel(s.id)} className="text-xs text-red-500 hover:text-red-700">Cancelar</button>
                       )}
                     </td>

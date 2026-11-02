@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { useApp } from '../contexts/AppContext';
+import { useAuth } from '../contexts/AuthContext';
 import { formatDate, formatPhone, FOLLOW_UP_STATUS_LABELS, FOLLOW_UP_REASON_LABELS, isOverdue, isToday } from '../utils/format';
 import { FollowUpTask, FollowUpStatus, FollowUpReason, ContactPreference } from '../types';
 import { Plus, X, CalendarCheck, AlertTriangle, CheckCircle2, Clock } from 'lucide-react';
@@ -7,6 +8,7 @@ import { getTodayStr } from '../utils/format';
 
 export default function FollowUps() {
   const { state, addFollowUp, updateFollowUp, showToast } = useApp();
+  const { can } = useAuth();
   const [showForm, setShowForm] = useState(false);
   const [filter, setFilter] = useState<'all' | 'pending' | 'overdue' | 'today' | 'completed'>('all');
   const [form, setForm] = useState({ customerId: '', reason: 'post_purchase' as FollowUpReason, description: '', channel: 'whatsapp' as ContactPreference, scheduledDate: getTodayStr(), responsible: '' });
@@ -64,9 +66,11 @@ export default function FollowUps() {
     <div className="space-y-4">
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
         <h2 className="text-2xl font-bold text-gray-800">Pós-venda & Acompanhamentos</h2>
-        <button onClick={() => setShowForm(true)} className="flex items-center gap-1 px-3 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700">
-          <Plus className="w-4 h-4" /> Nova Tarefa
-        </button>
+        {can('create') && (
+          <button onClick={() => setShowForm(true)} className="flex items-center gap-1 px-3 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+            <Plus className="w-4 h-4" /> Nova Tarefa
+          </button>
+        )}
       </div>
 
       {/* Filters */}
@@ -113,14 +117,20 @@ export default function FollowUps() {
               {/* Actions */}
               {task.status !== 'completed' && task.status !== 'cancelled' && (
                 <div className="mt-3 pt-3 border-t border-gray-100 flex flex-wrap gap-2">
+                  {can('edit') && (
                   <div className="flex-1">
                     <input value={resultForm[task.id] || ''} onChange={e => setResultForm({ ...resultForm, [task.id]: e.target.value })} placeholder="Registrar resultado..." className="w-full px-3 py-1.5 border border-gray-200 rounded-lg text-sm" />
                   </div>
+                  )}
+                  {can('edit') && (
+                  <>
                   <button onClick={() => handleSaveResult(task.id)} className="px-3 py-1.5 text-xs bg-gray-100 rounded-lg hover:bg-gray-200">Salvar</button>
                   <button onClick={() => handleStatusChange(task.id, 'completed')} className="px-3 py-1.5 text-xs bg-green-100 text-green-700 rounded-lg hover:bg-green-200 flex items-center gap-1">
                     <CheckCircle2 className="w-3 h-3" /> Concluir
                   </button>
                   <button onClick={() => handleStatusChange(task.id, 'cancelled')} className="px-3 py-1.5 text-xs bg-gray-100 text-gray-600 rounded-lg hover:bg-gray-200">Cancelar</button>
+                  </>
+                  )}
                 </div>
               )}
             </div>

@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { useApp } from '../contexts/AppContext';
+import { useAuth } from '../contexts/AuthContext';
 import { formatCurrency, formatDate, STAGE_LABELS, STAGE_COLORS, ORIGIN_LABELS, LOSS_REASON_LABELS, isOverdue } from '../utils/format';
 import { Lead, LeadStage, CustomerOrigin, LossReason, QuoteItem } from '../types';
 import { Plus, X, Target, ChevronRight, AlertTriangle, FileText } from 'lucide-react';
@@ -7,6 +8,7 @@ import { v4 as uuid } from 'uuid';
 
 export default function Leads() {
   const { state, addLead, updateLead, addQuote, addCustomer, showToast } = useApp();
+  const { can } = useAuth();
   const [showLeadForm, setShowLeadForm] = useState(false);
   const [showQuoteForm, setShowQuoteForm] = useState(false);
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
@@ -95,9 +97,11 @@ export default function Leads() {
     <div className="space-y-4">
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
         <h2 className="text-2xl font-bold text-gray-800">Leads & Orçamentos</h2>
-        <button onClick={() => setShowLeadForm(true)} className="flex items-center gap-1 px-3 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700">
-          <Plus className="w-4 h-4" /> Novo Lead
-        </button>
+        {can('create') && (
+          <button onClick={() => setShowLeadForm(true)} className="flex items-center gap-1 px-3 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+            <Plus className="w-4 h-4" /> Novo Lead
+          </button>
+        )}
       </div>
 
       {/* Pipeline View */}
@@ -180,10 +184,12 @@ export default function Leads() {
 
               {/* Actions */}
               <div className="border-t pt-3 flex flex-wrap gap-2">
-                <button onClick={() => { setShowQuoteForm(true); }} className="flex items-center gap-1 px-3 py-2 text-sm bg-purple-600 text-white rounded-lg hover:bg-purple-700">
-                  <FileText className="w-4 h-4" /> Criar Orçamento
-                </button>
-                {!selectedLead.customerId && (
+                {can('create') && (
+                  <button onClick={() => { setShowQuoteForm(true); }} className="flex items-center gap-1 px-3 py-2 text-sm bg-purple-600 text-white rounded-lg hover:bg-purple-700">
+                    <FileText className="w-4 h-4" /> Criar Orçamento
+                  </button>
+                )}
+                {!selectedLead.customerId && can('create') && (
                   <button onClick={() => { handleConvertToCustomer(selectedLead); setSelectedLead(null); }} className="flex items-center gap-1 px-3 py-2 text-sm bg-green-600 text-white rounded-lg hover:bg-green-700">
                     <Target className="w-4 h-4" /> Converter em Cliente
                   </button>

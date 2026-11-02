@@ -11,7 +11,7 @@ export interface UserProfile {
   organizationId: string;
   name: string;
   email: string;
-  role: 'admin' | 'operator' | 'viewer';
+  role: 'owner' | 'admin' | 'operator' | 'viewer';
   createdAt: string;
 }
 

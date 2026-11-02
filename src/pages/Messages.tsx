@@ -1,11 +1,13 @@
 import React, { useState } from 'react';
 import { useApp } from '../contexts/AppContext';
+import { useAuth } from '../contexts/AuthContext';
 import { formatDate, formatDateTime, formatPhone } from '../utils/format';
 import { MessageCircle, AlertTriangle, Send, Settings, Info } from 'lucide-react';
 import { MessageStatus } from '../types';
 
 export default function Messages() {
   const { state, addMessageEvent, showToast } = useApp();
+  const { can } = useAuth();
   const [selectedTemplate, setSelectedTemplate] = useState('');
   const [selectedCustomer, setSelectedCustomer] = useState('');
 
@@ -109,6 +111,7 @@ export default function Messages() {
               </p>
             </div>
           )}
+          {can('create') && (
           <div className="flex gap-2">
             <button onClick={() => handleSend(true)} className="flex items-center gap-1 px-4 py-2 text-sm bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200">
               <Send className="w-4 h-4" /> Enviar (Teste)
@@ -117,6 +120,7 @@ export default function Messages() {
               <Send className="w-4 h-4" /> Agendar (Real)
             </button>
           </div>
+          )}
         </div>
       </div>
 

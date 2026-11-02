@@ -1,11 +1,13 @@
 import React, { useState, useMemo } from 'react';
 import { useApp } from '../contexts/AppContext';
+import { useAuth } from '../contexts/AuthContext';
 import { formatCurrency, CATEGORY_LABELS } from '../utils/format';
 import { Product, ProductCategory } from '../types';
 import { Plus, Search, Edit2, X, Package } from 'lucide-react';
 
 export default function Products() {
   const { state, addProduct, updateProduct, showToast } = useApp();
+  const { can } = useAuth();
   const [search, setSearch] = useState('');
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -54,9 +56,11 @@ export default function Products() {
     <div className="space-y-4">
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
         <h2 className="text-2xl font-bold text-gray-800">Produtos</h2>
-        <button onClick={() => setShowForm(true)} className="flex items-center gap-1 px-3 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700">
-          <Plus className="w-4 h-4" /> Novo Produto
-        </button>
+        {can('create') && (
+          <button onClick={() => setShowForm(true)} className="flex items-center gap-1 px-3 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+            <Plus className="w-4 h-4" /> Novo Produto
+          </button>
+        )}
       </div>
 
       <div className="relative">
