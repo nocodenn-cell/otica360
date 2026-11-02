@@ -70,6 +70,9 @@ function legacyHasRecords(s: AppState): boolean {
 
 interface AppContextType {
   state: AppState;
+  // Espelho vivo do estado: leituras feitas logo apos um mutador aguardado
+  // precisam ver a linha ja gravada, antes do proximo render.
+  getState: () => AppState;
   toast: string;
   showToast: (msg: string) => void;
   dataStatus: DataStatus;
@@ -448,7 +451,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }, [guard, publishState]);
 
   const value: AppContextType = {
-    state, toast, showToast, dataStatus, reload: () => { void runLoad(); },
+    state, getState: () => stateRef.current, toast, showToast, dataStatus, reload: () => { void runLoad(); },
     addCustomer, updateCustomer,
     addProduct, updateProduct,
     addSale, updateSaleStatus,

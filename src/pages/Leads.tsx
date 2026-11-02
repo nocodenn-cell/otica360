@@ -2,12 +2,13 @@ import React, { useState, useMemo } from 'react';
 import { useApp } from '../contexts/AppContext';
 import { useAuth } from '../contexts/AuthContext';
 import { formatCurrency, formatDate, STAGE_LABELS, STAGE_COLORS, ORIGIN_LABELS, LOSS_REASON_LABELS, isOverdue } from '../utils/format';
+import { findCustomerByPhone } from '../utils/leadConversion';
 import { Lead, LeadStage, CustomerOrigin, LossReason, QuoteItem } from '../types';
 import { Plus, X, Target, ChevronRight, AlertTriangle, FileText } from 'lucide-react';
 import { v4 as uuid } from 'uuid';
 
 export default function Leads() {
-  const { state, addLead, updateLead, addQuote, addCustomer, showToast } = useApp();
+  const { state, getState, addLead, updateLead, addQuote, addCustomer, showToast } = useApp();
   const { can } = useAuth();
   const [showLeadForm, setShowLeadForm] = useState(false);
   const [showQuoteForm, setShowQuoteForm] = useState(false);
@@ -35,31 +36,31 @@ export default function Leads() {
     setShowLeadForm(false);
   };
 
+  const convertLeadToCustomer = async (lead: Lead): Promise<'linked' | 'created' | 'failed'> => {
+    if (lead.customerId) return 'linked';
+    const existing = findCustomerByPhone(getState().customers, lead);
+    if (existing) {
+      return (await updateLead(lead.id, { customerId: existing.id })) ? 'linked' : 'failed';
+    }
+    const ok = await addCustomer({ name: lead.name, phone: lead.phone, email: lead.email, origin: lead.origin, contactPreference: 'whatsapp', communicationStatus: 'pending', notes: lead.notes, lastPurchaseDate: null, nextActionDate: null, responsible: lead.responsible, archived: false });
+    if (!ok) return 'failed';
+    const created = findCustomerByPhone(getState().customers, lead);
+    if (!created) return 'failed';
+    return (await updateLead(lead.id, { customerId: created.id })) ? 'created' : 'failed';
+  };
+
   const handleStageChange = async (lead: Lead, newStage: LeadStage) => {
     const ok = await updateLead(lead.id, { stage: newStage });
     if (!ok) return;
     if (newStage === 'won') {
-      // Convert to customer if not already
-      if (!lead.customerId) {
-        const existing = state.customers.find(c => c.phone.replace(/\D/g, '') === lead.phone.replace(/\D/g, ''));
-        if (existing) {
-          await updateLead(lead.id, { customerId: existing.id });
-        } else {
-          await addCustomer({ name: lead.name, phone: lead.phone, email: lead.email, origin: lead.origin, contactPreference: 'whatsapp', communicationStatus: 'pending', notes: lead.notes, lastPurchaseDate: null, nextActionDate: null, responsible: lead.responsible, archived: false });
-        }
-      }
-      showToast('Lead convertido em venda!');
+      const outcome = await convertLeadToCustomer(lead);
+      if (outcome !== 'failed') showToast('Lead convertido em venda!');
     }
   };
 
   const handleConvertToCustomer = async (lead: Lead) => {
-    const existing = state.customers.find(c => c.phone.replace(/\D/g, '') === lead.phone.replace(/\D/g, ''));
-    if (existing) {
-      const ok = await updateLead(lead.id, { customerId: existing.id });
-      if (ok) showToast('Lead vinculado ao cliente existente.');
-    } else {
-      await addCustomer({ name: lead.name, phone: lead.phone, email: lead.email, origin: lead.origin, contactPreference: 'whatsapp', communicationStatus: 'pending', notes: lead.notes, lastPurchaseDate: null, nextActionDate: null, responsible: lead.responsible, archived: false });
-    }
+    const outcome = await convertLeadToCustomer(lead);
+    if (outcome === 'linked') showToast('Lead vinculado ao cliente existente.');
   };
 
   const addQuoteItem = () => {
