@@ -21,9 +21,9 @@ export default function CustomerDetail() {
   const customerFollowUps = state.followUps.filter(f => f.customerId === id).sort((a, b) => b.scheduledDate.localeCompare(a.scheduledDate));
   const customerQuotes = state.quotes.filter(q => q.customerId === id);
 
-  const handleCreateFollowUp = () => {
+  const handleCreateFollowUp = async () => {
     if (!followUpForm.scheduledDate) { showToast('Informe a data agendada.'); return; }
-    addFollowUp({
+    const ok = await addFollowUp({
       customerId: customer.id,
       customerName: customer.name,
       reason: followUpForm.reason,
@@ -35,6 +35,7 @@ export default function CustomerDetail() {
       result: '',
       nextActionDate: null,
     });
+    if (!ok) return;
     setShowFollowUpForm(false);
     setFollowUpForm({ reason: 'post_purchase', description: '', channel: 'whatsapp', scheduledDate: '', responsible: '' });
   };

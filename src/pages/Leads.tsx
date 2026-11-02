@@ -27,37 +27,38 @@ export default function Leads() {
     return map;
   }, [state.leads]);
 
-  const handleSaveLead = () => {
+  const handleSaveLead = async () => {
     if (!leadForm.name.trim()) { showToast('Nome é obrigatório.'); return; }
-    addLead({ ...leadForm, stage: 'new_contact', lossReason: null, customerId: null });
+    const ok = await addLead({ ...leadForm, stage: 'new_contact', lossReason: null, customerId: null });
+    if (!ok) return;
     setLeadForm({ name: '', phone: '', email: '', origin: 'unknown', estimatedValue: 0, responsible: '', nextContactDate: '', notes: '' });
     setShowLeadForm(false);
   };
 
-  const handleStageChange = (lead: Lead, newStage: LeadStage) => {
-    updateLead(lead.id, { stage: newStage });
+  const handleStageChange = async (lead: Lead, newStage: LeadStage) => {
+    const ok = await updateLead(lead.id, { stage: newStage });
+    if (!ok) return;
     if (newStage === 'won') {
       // Convert to customer if not already
       if (!lead.customerId) {
         const existing = state.customers.find(c => c.phone.replace(/\D/g, '') === lead.phone.replace(/\D/g, ''));
         if (existing) {
-          updateLead(lead.id, { customerId: existing.id });
+          await updateLead(lead.id, { customerId: existing.id });
         } else {
-          addCustomer({ name: lead.name, phone: lead.phone, email: lead.email, origin: lead.origin, contactPreference: 'whatsapp', communicationStatus: 'pending', notes: lead.notes, lastPurchaseDate: null, nextActionDate: null, responsible: lead.responsible, archived: false });
+          await addCustomer({ name: lead.name, phone: lead.phone, email: lead.email, origin: lead.origin, contactPreference: 'whatsapp', communicationStatus: 'pending', notes: lead.notes, lastPurchaseDate: null, nextActionDate: null, responsible: lead.responsible, archived: false });
         }
       }
       showToast('Lead convertido em venda!');
     }
   };
 
-  const handleConvertToCustomer = (lead: Lead) => {
+  const handleConvertToCustomer = async (lead: Lead) => {
     const existing = state.customers.find(c => c.phone.replace(/\D/g, '') === lead.phone.replace(/\D/g, ''));
     if (existing) {
-      updateLead(lead.id, { customerId: existing.id });
-      showToast('Lead vinculado ao cliente existente.');
+      const ok = await updateLead(lead.id, { customerId: existing.id });
+      if (ok) showToast('Lead vinculado ao cliente existente.');
     } else {
-      addCustomer({ name: lead.name, phone: lead.phone, email: lead.email, origin: lead.origin, contactPreference: 'whatsapp', communicationStatus: 'pending', notes: lead.notes, lastPurchaseDate: null, nextActionDate: null, responsible: lead.responsible, archived: false });
-      showToast('Lead convertido em cliente!');
+      await addCustomer({ name: lead.name, phone: lead.phone, email: lead.email, origin: lead.origin, contactPreference: 'whatsapp', communicationStatus: 'pending', notes: lead.notes, lastPurchaseDate: null, nextActionDate: null, responsible: lead.responsible, archived: false });
     }
   };
 
@@ -71,10 +72,10 @@ export default function Leads() {
     setQuoteQty(1);
   };
 
-  const handleSaveQuote = () => {
+  const handleSaveQuote = async () => {
     if (!selectedLead || quoteItems.length === 0) return;
     const sub = quoteItems.reduce((s, i) => s + i.total, 0);
-    addQuote({
+    const ok = await addQuote({
       leadId: selectedLead.id,
       customerId: selectedLead.customerId,
       customerName: selectedLead.name,
@@ -86,11 +87,11 @@ export default function Leads() {
       validUntil: new Date(Date.now() + 15 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
       notes: '',
     });
-    updateLead(selectedLead.id, { stage: 'quote_sent' });
+    if (!ok) return;
+    await updateLead(selectedLead.id, { stage: 'quote_sent' });
     setShowQuoteForm(false);
     setQuoteItems([]);
     setQuoteDiscount(0);
-    showToast('Orçamento criado e enviado!');
   };
 
   return (

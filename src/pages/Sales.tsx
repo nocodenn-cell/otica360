@@ -43,14 +43,14 @@ export default function Sales() {
     setSaleItems(saleItems.filter(i => i.id !== itemId));
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (saleItems.length === 0) { showToast('Adicione pelo menos um item.'); return; }
     if (!form.date) { showToast('Informe a data da venda.'); return; }
     const validationError = validateSaleItems(saleItems, form.discount);
     if (validationError) { showToast(validationError); return; }
 
     const saleNumber = generateSaleNumber(state.sales);
-    addSale({
+    const ok = await addSale({
       number: saleNumber,
       customerId: form.customerId || null,
       customerName: form.customerName || 'Cliente não identificado',
@@ -65,6 +65,7 @@ export default function Sales() {
       responsible: form.responsible,
       notes: form.notes,
     });
+    if (!ok) return;
     resetForm();
   };
 

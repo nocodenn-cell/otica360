@@ -24,7 +24,7 @@ export default function Customers() {
     return state.customers.filter(c => !c.archived && (c.name.toLowerCase().includes(q) || c.phone.includes(q) || c.email.toLowerCase().includes(q)));
   }, [state.customers, search]);
 
-  const handleSave = () => {
+  const handleSave = async () => {
     const errs: string[] = [];
     if (!form.name.trim()) errs.push('Nome é obrigatório');
     if (!isValidPhone(form.phone)) errs.push('Telefone inválido');
@@ -39,8 +39,8 @@ export default function Customers() {
 
     const customerData = { ...form, lastPurchaseDate: null as string | null, nextActionDate: null as string | null, archived: false };
     if (editingId) {
-      updateCustomer(editingId, form);
-      showToast('Cliente atualizado!');
+      const ok = await updateCustomer(editingId, form);
+      if (ok) showToast('Cliente atualizado!');
     } else {
       addCustomer(customerData);
     }
@@ -60,10 +60,10 @@ export default function Customers() {
     setShowForm(true);
   };
 
-  const handleArchive = (id: string) => {
+  const handleArchive = async (id: string) => {
     if (window.confirm('Arquivar este cliente?')) {
-      updateCustomer(id, { archived: true });
-      showToast('Cliente arquivado.');
+      const ok = await updateCustomer(id, { archived: true });
+      if (ok) showToast('Cliente arquivado.');
     }
   };
 
@@ -234,7 +234,7 @@ export default function Customers() {
   );
 }
 
-function ImportModal({ onClose, onImport, showToast }: { onClose: () => void; onImport: (customers: any[]) => void; showToast: (msg: string) => void }) {
+function ImportModal({ onClose, onImport, showToast }: { onClose: () => void; onImport: (customers: any[]) => Promise<boolean>; showToast: (msg: string) => void }) {
   const [csvText, setCsvText] = useState('');
   const [preview, setPreview] = useState<{ headers: string[]; rows: string[][] } | null>(null);
   const [mapping, setMapping] = useState<Record<string, string>>({});
@@ -263,7 +263,7 @@ function ImportModal({ onClose, onImport, showToast }: { onClose: () => void; on
     reader.readAsText(file);
   };
 
-  const handleImport = () => {
+  const handleImport = async () => {
     if (!preview) return;
     const errs: string[] = [];
     const customers: any[] = [];
@@ -290,7 +290,8 @@ function ImportModal({ onClose, onImport, showToast }: { onClose: () => void; on
     });
     if (errs.length > 0) { setImportErrors(errs); return; }
     if (customers.length === 0) { showToast('Nenhum cliente válido encontrado.'); return; }
-    onImport(customers);
+    const ok = await onImport(customers);
+    if (!ok) return;
     onClose();
   };
 

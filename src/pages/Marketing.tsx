@@ -11,10 +11,11 @@ export default function Marketing() {
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState({ name: '', platform: '', startDate: '', endDate: '', investment: 0, leadsGenerated: 0, quotesRelated: 0, salesAttributed: 0, revenueAttributed: 0, notes: '' });
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!form.name.trim()) { showToast('Nome é obrigatório.'); return; }
     if (!form.startDate) { showToast('Data de início é obrigatória.'); return; }
-    addCampaign(form);
+    const ok = await addCampaign(form);
+    if (!ok) return;
     setShowForm(false);
     setForm({ name: '', platform: '', startDate: '', endDate: '', investment: 0, leadsGenerated: 0, quotesRelated: 0, salesAttributed: 0, revenueAttributed: 0, notes: '' });
   };

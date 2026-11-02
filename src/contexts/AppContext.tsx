@@ -74,22 +74,22 @@ interface AppContextType {
   showToast: (msg: string) => void;
   dataStatus: DataStatus;
   reload: () => void;
-  addCustomer: (c: Omit<Customer, 'id' | 'organizationId' | 'createdAt' | 'updatedAt'>) => void;
-  updateCustomer: (id: string, u: Partial<Customer>) => void;
-  addProduct: (p: Omit<Product, 'id' | 'organizationId' | 'createdAt' | 'updatedAt'>) => void;
-  updateProduct: (id: string, u: Partial<Product>) => void;
-  addSale: (s: Omit<Sale, 'id' | 'organizationId' | 'createdAt' | 'updatedAt'>) => void;
-  updateSaleStatus: (id: string, status: Sale['status']) => void;
-  addLead: (l: Omit<Lead, 'id' | 'organizationId' | 'createdAt' | 'updatedAt'>) => void;
-  updateLead: (id: string, u: Partial<Lead>) => void;
-  addQuote: (q: Omit<Quote, 'id' | 'organizationId' | 'createdAt' | 'updatedAt'>) => void;
-  updateQuote: (id: string, u: Partial<Quote>) => void;
-  addFollowUp: (f: Omit<FollowUpTask, 'id' | 'organizationId' | 'createdAt' | 'updatedAt'>) => void;
-  updateFollowUp: (id: string, u: Partial<FollowUpTask>) => void;
-  addCampaign: (c: Omit<MarketingCampaign, 'id' | 'organizationId' | 'createdAt' | 'updatedAt'>) => void;
-  updateCampaign: (id: string, u: Partial<MarketingCampaign>) => void;
-  addMessageEvent: (e: Omit<MessageEvent, 'id' | 'organizationId' | 'createdAt'>) => void;
-  importCustomers: (customers: Omit<Customer, 'id' | 'organizationId' | 'createdAt' | 'updatedAt'>[]) => void;
+  addCustomer: (c: Omit<Customer, 'id' | 'organizationId' | 'createdAt' | 'updatedAt'>) => Promise<boolean>;
+  updateCustomer: (id: string, u: Partial<Customer>) => Promise<boolean>;
+  addProduct: (p: Omit<Product, 'id' | 'organizationId' | 'createdAt' | 'updatedAt'>) => Promise<boolean>;
+  updateProduct: (id: string, u: Partial<Product>) => Promise<boolean>;
+  addSale: (s: Omit<Sale, 'id' | 'organizationId' | 'createdAt' | 'updatedAt'>) => Promise<boolean>;
+  updateSaleStatus: (id: string, status: Sale['status']) => Promise<boolean>;
+  addLead: (l: Omit<Lead, 'id' | 'organizationId' | 'createdAt' | 'updatedAt'>) => Promise<boolean>;
+  updateLead: (id: string, u: Partial<Lead>) => Promise<boolean>;
+  addQuote: (q: Omit<Quote, 'id' | 'organizationId' | 'createdAt' | 'updatedAt'>) => Promise<boolean>;
+  updateQuote: (id: string, u: Partial<Quote>) => Promise<boolean>;
+  addFollowUp: (f: Omit<FollowUpTask, 'id' | 'organizationId' | 'createdAt' | 'updatedAt'>) => Promise<boolean>;
+  updateFollowUp: (id: string, u: Partial<FollowUpTask>) => Promise<boolean>;
+  addCampaign: (c: Omit<MarketingCampaign, 'id' | 'organizationId' | 'createdAt' | 'updatedAt'>) => Promise<boolean>;
+  updateCampaign: (id: string, u: Partial<MarketingCampaign>) => Promise<boolean>;
+  addMessageEvent: (e: Omit<MessageEvent, 'id' | 'organizationId' | 'createdAt'>) => Promise<boolean>;
+  importCustomers: (customers: Omit<Customer, 'id' | 'organizationId' | 'createdAt' | 'updatedAt'>[]) => Promise<boolean>;
   setState: (s: AppState) => void;
 }
 
@@ -212,14 +212,15 @@ export function AppProvider({ children }: { children: ReactNode }) {
     run: () => Promise<CommitResult<T>>,
     onOk: (row: T) => void,
     successMsg: string | null,
-  ): Promise<void> => {
+  ): Promise<boolean> => {
     const res = await run();
     if (!res.ok || res.data === undefined) {
       showToast(res.error ?? 'Falha ao gravar no servidor. Nenhuma alteração foi confirmada.');
-      return;
+      return false;
     }
     onOk(res.data);
     if (successMsg) showToast(successMsg);
+    return true;
   }, [showToast]);
 
   // --- operações síncronas (modo demonstração, persistindo em localStorage) ---
@@ -238,73 +239,74 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const orgId = user?.organizationId ?? state.organization.id;
 
   // ---------- Customer ----------
-  const addCustomer = useCallback((c: Omit<Customer, 'id' | 'organizationId' | 'createdAt' | 'updatedAt'>) => {
-    if (!guard('create')) return;
+  const addCustomer = useCallback(async (c: Omit<Customer, 'id' | 'organizationId' | 'createdAt' | 'updatedAt'>): Promise<boolean> => {
+    if (!guard('create')) return false;
     if (isServer) {
-      void serverCommit(
+      return serverCommit(
         () => customersRepo.insert({ ...c, organizationId: orgId } as NewOf<Customer>),
         row => patchState(s => appendRow(s, 'customers', row)),
         'Cliente cadastrado com sucesso!',
       );
-      return;
     }
-    if (dispatch({ type: 'ADD_CUSTOMER', customer: c })) showToast('Cliente cadastrado com sucesso!');
+    const ok = dispatch({ type: 'ADD_CUSTOMER', customer: c });
+    if (ok) showToast('Cliente cadastrado com sucesso!');
+    return ok;
   }, [guard, isServer, orgId, serverCommit, patchState, dispatch, showToast]);
 
-  const updateCustomer = useCallback((id: string, u: Partial<Customer>) => {
-    if (!guard('edit')) return;
+  const updateCustomer = useCallback(async (id: string, u: Partial<Customer>): Promise<boolean> => {
+    if (!guard('edit')) return false;
     if (isServer) {
-      void serverCommit(
+      return serverCommit(
         () => customersRepo.update(id, u),
         row => patchState(s => replaceRow(s, 'customers', id, row)),
         null,
       );
-      return;
     }
-    dispatch({ type: 'UPDATE_CUSTOMER', id, updates: u });
+    return dispatch({ type: 'UPDATE_CUSTOMER', id, updates: u });
   }, [guard, isServer, serverCommit, patchState, dispatch]);
 
-  const importCustomers = useCallback((list: Omit<Customer, 'id' | 'organizationId' | 'createdAt' | 'updatedAt'>[]) => {
-    if (!guard('create')) return;
+  const importCustomers = useCallback(async (list: Omit<Customer, 'id' | 'organizationId' | 'createdAt' | 'updatedAt'>[]): Promise<boolean> => {
+    if (!guard('create')) return false;
     if (isServer) {
-      void serverCommit(
+      return serverCommit(
         () => customersRepo.bulkInsert(list.map(c => ({ ...c, organizationId: orgId })) as NewOf<Customer>[]),
         rows => patchState(s => ({ ...s, customers: [...s.customers, ...rows] })),
         `${list.length} cliente(s) importado(s)!`,
       );
-      return;
     }
-    if (dispatch({ type: 'IMPORT_CUSTOMERS', customers: list })) showToast(`${list.length} cliente(s) importado(s)!`);
+    const ok = dispatch({ type: 'IMPORT_CUSTOMERS', customers: list });
+    if (ok) showToast(`${list.length} cliente(s) importado(s)!`);
+    return ok;
   }, [guard, isServer, orgId, serverCommit, patchState, dispatch, showToast]);
 
   // ---------- Product ----------
-  const addProduct = useCallback((p: Omit<Product, 'id' | 'organizationId' | 'createdAt' | 'updatedAt'>) => {
-    if (!guard('create')) return;
+  const addProduct = useCallback(async (p: Omit<Product, 'id' | 'organizationId' | 'createdAt' | 'updatedAt'>): Promise<boolean> => {
+    if (!guard('create')) return false;
     if (isServer) {
-      void serverCommit(
+      return serverCommit(
         () => productsRepo.insert({ ...p, organizationId: orgId } as NewOf<Product>),
         row => patchState(s => appendRow(s, 'products', row)),
         'Produto cadastrado!',
       );
-      return;
     }
-    if (dispatch({ type: 'ADD_PRODUCT', product: p })) showToast('Produto cadastrado!');
+    const ok = dispatch({ type: 'ADD_PRODUCT', product: p });
+    if (ok) showToast('Produto cadastrado!');
+    return ok;
   }, [guard, isServer, orgId, serverCommit, patchState, dispatch, showToast]);
 
-  const updateProduct = useCallback((id: string, u: Partial<Product>) => {
-    if (!guard('edit')) return;
+  const updateProduct = useCallback(async (id: string, u: Partial<Product>): Promise<boolean> => {
+    if (!guard('edit')) return false;
     if (isServer) {
-      void serverCommit(() => productsRepo.update(id, u), row => patchState(s => replaceRow(s, 'products', id, row)), null);
-      return;
+      return serverCommit(() => productsRepo.update(id, u), row => patchState(s => replaceRow(s, 'products', id, row)), null);
     }
-    dispatch({ type: 'UPDATE_PRODUCT', id, updates: u });
+    return dispatch({ type: 'UPDATE_PRODUCT', id, updates: u });
   }, [guard, isServer, serverCommit, patchState, dispatch]);
 
   // ---------- Sale ----------
-  const addSale = useCallback((s: Omit<Sale, 'id' | 'organizationId' | 'createdAt' | 'updatedAt'>) => {
-    if (!guard('create')) return;
+  const addSale = useCallback(async (s: Omit<Sale, 'id' | 'organizationId' | 'createdAt' | 'updatedAt'>): Promise<boolean> => {
+    if (!guard('create')) return false;
     if (isServer) {
-      void serverCommit(
+      return serverCommit(
         () => createSale({ ...s, organizationId: orgId } as NewOf<Sale>),
         row => patchState(st => {
           let next = appendRow(st, 'sales', row);
@@ -315,128 +317,129 @@ export function AppProvider({ children }: { children: ReactNode }) {
         }),
         'Venda registrada!',
       );
-      return;
     }
-    if (dispatch({ type: 'ADD_SALE', sale: s })) showToast('Venda registrada!');
+    const ok = dispatch({ type: 'ADD_SALE', sale: s });
+    if (ok) showToast('Venda registrada!');
+    return ok;
   }, [guard, isServer, orgId, serverCommit, patchState, dispatch, showToast]);
 
-  const updateSaleStatus = useCallback((id: string, status: Sale['status']) => {
-    if (!guard('edit')) return;
+  const updateSaleStatus = useCallback(async (id: string, status: Sale['status']): Promise<boolean> => {
+    if (!guard('edit')) return false;
     if (isServer) {
-      void serverCommit(
+      return serverCommit(
         () => repoUpdateSaleStatus(id, status),
         row => patchState(s => replaceRow(s, 'sales', id, { status, updatedAt: row.updatedAt })),
         'Status atualizado!',
       );
-      return;
     }
-    if (dispatch({ type: 'UPDATE_SALE_STATUS', id, status })) showToast('Status atualizado!');
+    const ok = dispatch({ type: 'UPDATE_SALE_STATUS', id, status });
+    if (ok) showToast('Status atualizado!');
+    return ok;
   }, [guard, isServer, serverCommit, patchState, dispatch, showToast]);
 
   // ---------- Lead ----------
-  const addLead = useCallback((l: Omit<Lead, 'id' | 'organizationId' | 'createdAt' | 'updatedAt'>) => {
-    if (!guard('create')) return;
+  const addLead = useCallback(async (l: Omit<Lead, 'id' | 'organizationId' | 'createdAt' | 'updatedAt'>): Promise<boolean> => {
+    if (!guard('create')) return false;
     if (isServer) {
-      void serverCommit(
+      return serverCommit(
         () => leadsRepo.insert({ ...l, organizationId: orgId } as NewOf<Lead>),
         row => patchState(s => appendRow(s, 'leads', row)),
         'Lead cadastrado!',
       );
-      return;
     }
-    if (dispatch({ type: 'ADD_LEAD', lead: l })) showToast('Lead cadastrado!');
+    const ok = dispatch({ type: 'ADD_LEAD', lead: l });
+    if (ok) showToast('Lead cadastrado!');
+    return ok;
   }, [guard, isServer, orgId, serverCommit, patchState, dispatch, showToast]);
 
-  const updateLead = useCallback((id: string, u: Partial<Lead>) => {
-    if (!guard('edit')) return;
+  const updateLead = useCallback(async (id: string, u: Partial<Lead>): Promise<boolean> => {
+    if (!guard('edit')) return false;
     if (isServer) {
-      void serverCommit(() => leadsRepo.update(id, u), row => patchState(s => replaceRow(s, 'leads', id, row)), null);
-      return;
+      return serverCommit(() => leadsRepo.update(id, u), row => patchState(s => replaceRow(s, 'leads', id, row)), null);
     }
-    dispatch({ type: 'UPDATE_LEAD', id, updates: u });
+    return dispatch({ type: 'UPDATE_LEAD', id, updates: u });
   }, [guard, isServer, serverCommit, patchState, dispatch]);
 
   // ---------- Quote ----------
-  const addQuote = useCallback((q: Omit<Quote, 'id' | 'organizationId' | 'createdAt' | 'updatedAt'>) => {
-    if (!guard('create')) return;
+  const addQuote = useCallback(async (q: Omit<Quote, 'id' | 'organizationId' | 'createdAt' | 'updatedAt'>): Promise<boolean> => {
+    if (!guard('create')) return false;
     if (isServer) {
-      void serverCommit(
+      return serverCommit(
         () => createQuote({ ...q, organizationId: orgId } as NewOf<Quote>),
         row => patchState(s => appendRow(s, 'quotes', row)),
         'Orçamento criado!',
       );
-      return;
     }
-    if (dispatch({ type: 'ADD_QUOTE', quote: q })) showToast('Orçamento criado!');
+    const ok = dispatch({ type: 'ADD_QUOTE', quote: q });
+    if (ok) showToast('Orçamento criado!');
+    return ok;
   }, [guard, isServer, orgId, serverCommit, patchState, dispatch, showToast]);
 
-  const updateQuote = useCallback((id: string, u: Partial<Quote>) => {
-    if (!guard('edit')) return;
+  const updateQuote = useCallback(async (id: string, u: Partial<Quote>): Promise<boolean> => {
+    if (!guard('edit')) return false;
     if (isServer) {
-      void serverCommit(() => repoUpdateQuote(id, u), row => patchState(s => replaceRow(s, 'quotes', id, { ...u, ...row })), null);
-      return;
+      return serverCommit(() => repoUpdateQuote(id, u), row => patchState(s => replaceRow(s, 'quotes', id, { ...u, ...row })), null);
     }
-    dispatch({ type: 'UPDATE_QUOTE', id, updates: u });
+    return dispatch({ type: 'UPDATE_QUOTE', id, updates: u });
   }, [guard, isServer, serverCommit, patchState, dispatch]);
 
   // ---------- FollowUp ----------
-  const addFollowUp = useCallback((f: Omit<FollowUpTask, 'id' | 'organizationId' | 'createdAt' | 'updatedAt'>) => {
-    if (!guard('create')) return;
+  const addFollowUp = useCallback(async (f: Omit<FollowUpTask, 'id' | 'organizationId' | 'createdAt' | 'updatedAt'>): Promise<boolean> => {
+    if (!guard('create')) return false;
     if (isServer) {
-      void serverCommit(
+      return serverCommit(
         () => followUpsRepo.insert({ ...f, organizationId: orgId } as NewOf<FollowUpTask>),
         row => patchState(s => appendRow(s, 'followUps', row)),
         'Tarefa criada!',
       );
-      return;
     }
-    if (dispatch({ type: 'ADD_FOLLOW_UP', task: f })) showToast('Tarefa criada!');
+    const ok = dispatch({ type: 'ADD_FOLLOW_UP', task: f });
+    if (ok) showToast('Tarefa criada!');
+    return ok;
   }, [guard, isServer, orgId, serverCommit, patchState, dispatch, showToast]);
 
-  const updateFollowUp = useCallback((id: string, u: Partial<FollowUpTask>) => {
-    if (!guard('edit')) return;
+  const updateFollowUp = useCallback(async (id: string, u: Partial<FollowUpTask>): Promise<boolean> => {
+    if (!guard('edit')) return false;
     if (isServer) {
-      void serverCommit(() => followUpsRepo.update(id, u), row => patchState(s => replaceRow(s, 'followUps', id, row)), null);
-      return;
+      return serverCommit(() => followUpsRepo.update(id, u), row => patchState(s => replaceRow(s, 'followUps', id, row)), null);
     }
-    dispatch({ type: 'UPDATE_FOLLOW_UP', id, updates: u });
+    return dispatch({ type: 'UPDATE_FOLLOW_UP', id, updates: u });
   }, [guard, isServer, serverCommit, patchState, dispatch]);
 
   // ---------- Campaign ----------
-  const addCampaign = useCallback((c: Omit<MarketingCampaign, 'id' | 'organizationId' | 'createdAt' | 'updatedAt'>) => {
-    if (!guard('create')) return;
+  const addCampaign = useCallback(async (c: Omit<MarketingCampaign, 'id' | 'organizationId' | 'createdAt' | 'updatedAt'>): Promise<boolean> => {
+    if (!guard('create')) return false;
     if (isServer) {
-      void serverCommit(
+      return serverCommit(
         () => campaignsRepo.insert({ ...c, organizationId: orgId } as NewOf<MarketingCampaign>),
         row => patchState(s => appendRow(s, 'campaigns', row)),
         'Campanha criada!',
       );
-      return;
     }
-    if (dispatch({ type: 'ADD_CAMPAIGN', campaign: c })) showToast('Campanha criada!');
+    const ok = dispatch({ type: 'ADD_CAMPAIGN', campaign: c });
+    if (ok) showToast('Campanha criada!');
+    return ok;
   }, [guard, isServer, orgId, serverCommit, patchState, dispatch, showToast]);
 
-  const updateCampaign = useCallback((id: string, u: Partial<MarketingCampaign>) => {
-    if (!guard('edit')) return;
+  const updateCampaign = useCallback(async (id: string, u: Partial<MarketingCampaign>): Promise<boolean> => {
+    if (!guard('edit')) return false;
     if (isServer) {
-      void serverCommit(() => campaignsRepo.update(id, u), row => patchState(s => replaceRow(s, 'campaigns', id, row)), null);
-      return;
+      return serverCommit(() => campaignsRepo.update(id, u), row => patchState(s => replaceRow(s, 'campaigns', id, row)), null);
     }
-    dispatch({ type: 'UPDATE_CAMPAIGN', id, updates: u });
+    return dispatch({ type: 'UPDATE_CAMPAIGN', id, updates: u });
   }, [guard, isServer, serverCommit, patchState, dispatch]);
 
   // ---------- Message ----------
-  const addMessageEvent = useCallback((e: Omit<MessageEvent, 'id' | 'organizationId' | 'createdAt'>) => {
-    if (!guard('create')) return;
+  const addMessageEvent = useCallback(async (e: Omit<MessageEvent, 'id' | 'organizationId' | 'createdAt'>): Promise<boolean> => {
+    if (!guard('create')) return false;
     if (isServer) {
-      void serverCommit(
+      return serverCommit(
         () => messagesRepo.insert({ ...e, organizationId: orgId }),
         row => patchState(s => appendRow(s, 'messageEvents', row)),
         null,
       );
-      return;
     }
-    dispatch({ type: 'ADD_MESSAGE_EVENT', event: e });
+    return dispatch({ type: 'ADD_MESSAGE_EVENT', event: e });
   }, [guard, isServer, orgId, serverCommit, patchState, dispatch]);
 
   // ---------- Admin ----------

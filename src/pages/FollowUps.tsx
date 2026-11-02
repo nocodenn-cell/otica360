@@ -23,12 +23,12 @@ export default function FollowUps() {
     return tasks.sort((a, b) => a.scheduledDate.localeCompare(b.scheduledDate));
   }, [state.followUps, filter]);
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!form.customerId) { showToast('Selecione um cliente.'); return; }
     if (!form.scheduledDate) { showToast('Informe a data.'); return; }
     const customer = state.customers.find(c => c.id === form.customerId);
     if (!customer) return;
-    addFollowUp({
+    const ok = await addFollowUp({
       customerId: form.customerId,
       customerName: customer.name,
       reason: form.reason,
@@ -40,18 +40,19 @@ export default function FollowUps() {
       result: '',
       nextActionDate: null,
     });
+    if (!ok) return;
     setShowForm(false);
     setForm({ customerId: '', reason: 'post_purchase', description: '', channel: 'whatsapp', scheduledDate: getTodayStr(), responsible: '' });
   };
 
-  const handleStatusChange = (id: string, status: FollowUpStatus) => {
-    updateFollowUp(id, { status });
-    if (status === 'completed') showToast('Tarefa concluída!');
+  const handleStatusChange = async (id: string, status: FollowUpStatus) => {
+    const ok = await updateFollowUp(id, { status });
+    if (ok && status === 'completed') showToast('Tarefa concluída!');
   };
 
-  const handleSaveResult = (id: string) => {
-    updateFollowUp(id, { result: resultForm[id] || '' });
-    showToast('Resultado registrado.');
+  const handleSaveResult = async (id: string) => {
+    const ok = await updateFollowUp(id, { result: resultForm[id] || '' });
+    if (ok) showToast('Resultado registrado.');
   };
 
   const filters = [

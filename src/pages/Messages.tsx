@@ -11,7 +11,7 @@ export default function Messages() {
   const [selectedTemplate, setSelectedTemplate] = useState('');
   const [selectedCustomer, setSelectedCustomer] = useState('');
 
-  const handleSend = (isTest: boolean) => {
+  const handleSend = async (isTest: boolean) => {
     if (!selectedTemplate || !selectedCustomer) {
       showToast('Selecione um template e um cliente.');
       return;
@@ -27,7 +27,7 @@ export default function Messages() {
 
     const content = template.content.replace('{{nome}}', customer.name.split(' ')[0]);
 
-    addMessageEvent({
+    const ok = await addMessageEvent({
       customerId: customer.id,
       customerName: customer.name,
       templateId: template.id,
@@ -42,6 +42,7 @@ export default function Messages() {
       retryCount: 0,
       isTestMode: isTest,
     });
+    if (!ok) return;
 
     showToast(isTest ? 'Mensagem de teste registrada (modo demonstração).' : 'Mensagem agendada (aguardando configuração da integração).');
   };

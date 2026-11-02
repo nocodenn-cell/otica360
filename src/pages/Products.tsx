@@ -19,17 +19,19 @@ export default function Products() {
     return state.products.filter(p => p.name.toLowerCase().includes(q) || p.code.toLowerCase().includes(q) || CATEGORY_LABELS[p.category].toLowerCase().includes(q));
   }, [state.products, search]);
 
-  const handleSave = () => {
+  const handleSave = async () => {
     const errs: string[] = [];
     if (!form.name.trim()) errs.push('Nome é obrigatório');
     if (form.price <= 0) errs.push('Preço deve ser maior que zero');
     if (errs.length > 0) { setErrors(errs); return; }
 
     if (editingId) {
-      updateProduct(editingId, form);
-      showToast('Produto atualizado!');
+      const ok = await updateProduct(editingId, form);
+      if (ok) showToast('Produto atualizado!');
+      if (!ok) return;
     } else {
-      addProduct(form);
+      const ok = await addProduct(form);
+      if (!ok) return;
     }
     resetForm();
   };
@@ -47,9 +49,9 @@ export default function Products() {
     setShowForm(true);
   };
 
-  const toggleActive = (id: string, active: boolean) => {
-    updateProduct(id, { active: !active });
-    showToast(active ? 'Produto desativado.' : 'Produto ativado.');
+  const toggleActive = async (id: string, active: boolean) => {
+    const ok = await updateProduct(id, { active: !active });
+    if (ok) showToast(active ? 'Produto desativado.' : 'Produto ativado.');
   };
 
   return (
