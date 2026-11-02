@@ -3,3 +3,8 @@ node_modules/
 dist/
 build/
 *.log
+
+# Ambiente local (nunca commitar chaves)
+.env
+.env.local
+supabase/.temp/

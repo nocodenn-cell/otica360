@@ -31,6 +31,13 @@ function configureSupabaseEnv() {
   vi.stubEnv('VITE_SUPABASE_ANON_KEY', 'anon-key');
 }
 
+// .env.local do desenvolvedor pode vazar para o Vitest; unstub restaura o
+// valor ambiente, então testes "sem Supabase" precisam stubar undefined.
+function clearSupabaseEnv() {
+  vi.stubEnv('VITE_SUPABASE_URL', undefined);
+  vi.stubEnv('VITE_SUPABASE_ANON_KEY', undefined);
+}
+
 function profileQuery(row: unknown, error: unknown = null) {
   mockFrom.mockReturnValue({
     select: () => ({
@@ -139,6 +146,7 @@ describe('signIn com Supabase', () => {
 
 describe('modo demo', () => {
   it('demo é aceito fora de produção', async () => {
+    clearSupabaseEnv();
     const { signIn, getAuthMode } = await loadAuth();
     expect(getAuthMode()).toBe('demo');
     const result = await signIn('dev@local', 'qualquer');
@@ -147,6 +155,7 @@ describe('modo demo', () => {
   });
 
   it('demo é bloqueado em produção sem Supabase', async () => {
+    clearSupabaseEnv();
     vi.stubEnv('PROD', 'true');
     const { signIn } = await loadAuth();
     const result = await signIn('dev@local', 'qualquer');
@@ -164,6 +173,7 @@ describe('modo demo', () => {
 
 describe('recuperação de senha', () => {
   it('sem Supabase configurado retorna erro', async () => {
+    clearSupabaseEnv();
     vi.stubEnv('PROD', 'false');
     const { requestPasswordReset } = await loadAuth();
     const result = await requestPasswordReset('a@b.com');

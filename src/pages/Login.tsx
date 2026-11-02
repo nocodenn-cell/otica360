@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Eye } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 
 export default function LoginPage() {
   const { signIn, mode } = useAuth();
+  const navigate = useNavigate();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -17,7 +18,9 @@ export default function LoginPage() {
 
     try {
       const result = await signIn(email, password);
-      if (!result.ok) {
+      if (result.ok) {
+        navigate('/', { replace: true });
+      } else {
         setError(result.error ?? 'Falha ao autenticar.');
       }
     } catch {
