@@ -268,4 +268,95 @@ BEGIN
   RAISE NOTICE 'OK: org B isolada da org A (inclusive auditoria e views)';
 END $$;
 
+
+-- ------------------------------------------------------------
+-- 7. RPC create_quote_with_items: atomicidade + revalidacao (004)
+-- ------------------------------------------------------------
+
+SELECT set_config('request.jwt.claims',
+  json_build_object('sub', 'aaaaaaaa-0000-0000-0000-000000000001', 'role', 'authenticated')::text, true);
+
+INSERT INTO public.leads (id, organization_id, name) VALUES
+  ('99999999-0000-0000-0000-000000000001', '11111111-1111-1111-1111-111111111111', 'Lead da A');
+
+DO $$
+DECLARE v_quote public.quotes; n INT;
+BEGIN
+  -- happy path: 2x150 = 300 subtotal, desconto 50, total 250
+  SELECT * INTO v_quote FROM public.create_quote_with_items(
+    '99999999-0000-0000-0000-000000000001'::UUID,
+    'cccccccc-0000-0000-0000-000000000001'::UUID,
+    'Cliente da A', 50, 'sent', CURRENT_DATE + 7, 'teste RLS',
+    jsonb_build_array(jsonb_build_object(
+      'product_id', 'f0000000-0000-0000-0000-000000000001',
+      'product_name', 'Oculos A', 'quantity', 2, 'unit_price', 150, 'total', 300)));
+  IF v_quote.subtotal <> 300 OR v_quote.total <> 250 THEN
+    RAISE EXCEPTION 'FALHA RPC quote: subtotal/total (%/%) esperados 300/250', v_quote.subtotal, v_quote.total;
+  END IF;
+
+  SELECT count(*) INTO n FROM public.quote_items WHERE quote_id = v_quote.id;
+  IF n <> 1 THEN RAISE EXCEPTION 'FALHA RPC quote: item nao gravado (%)', n; END IF;
+
+  SELECT count(*) INTO n FROM public.audit_logs WHERE entity = 'quote' AND entity_id = v_quote.id;
+  IF n <> 1 THEN RAISE EXCEPTION 'FALHA RPC quote: auditoria ausente (%)', n; END IF;
+
+  RAISE NOTICE 'OK: orcamento + item + auditoria gravados atomicamente (total %)', v_quote.total;
+END $$;
+
+DO $$
+BEGIN
+  BEGIN
+    PERFORM public.create_quote_with_items(
+      '99999999-0000-0000-0000-000000000001'::UUID, NULL,
+      'Cliente da A', 0, 'draft', CURRENT_DATE + 7, 'cross-org',
+      jsonb_build_array(jsonb_build_object(
+        'product_id', 'f0000000-0000-0000-0000-000000000002',
+        'product_name', 'Oculos B', 'quantity', 1, 'unit_price', 250, 'total', 250)));
+    RAISE EXCEPTION 'FALHA RPC quote: produto de outra org foi aceito';
+    EXCEPTION WHEN OTHERS THEN
+      IF SQLERRM NOT LIKE '%fora da%' THEN RAISE; END IF;
+      RAISE NOTICE 'OK: RPC quote rejeita produto de outra org';
+  END;
+
+  BEGIN
+    PERFORM public.create_quote_with_items(
+      '99999999-0000-0000-0000-000000000001'::UUID, NULL,
+      'Cliente da A', 0, 'draft', CURRENT_DATE + 7, 'fraude',
+      jsonb_build_array(jsonb_build_object(
+        'product_id', 'f0000000-0000-0000-0000-000000000001',
+        'product_name', 'Oculos A', 'quantity', 2, 'unit_price', 150, 'total', 1)));
+    RAISE EXCEPTION 'FALHA RPC quote: total fraudulento foi aceito';
+    EXCEPTION WHEN OTHERS THEN
+      IF SQLERRM NOT LIKE 'item de%' THEN RAISE; END IF;
+      RAISE NOTICE 'OK: RPC quote revalida totais dos itens (anti-fraude)';
+  END;
+
+  BEGIN
+    PERFORM public.create_quote_with_items(
+      '99999999-0000-0000-0000-000000000002'::UUID, NULL,
+      'X', 0, 'draft', CURRENT_DATE, 'cross-org lead',
+      jsonb_build_array(jsonb_build_object(
+        'product_id', 'f0000000-0000-0000-0000-000000000001',
+        'product_name', 'Oculos A', 'quantity', 1, 'unit_price', 150, 'total', 150)));
+    RAISE EXCEPTION 'FALHA RPC quote: lead de outra org foi aceito';
+    EXCEPTION WHEN OTHERS THEN
+      IF SQLERRM NOT LIKE 'lead fora%' THEN RAISE; END IF;
+      RAISE NOTICE 'OK: RPC quote rejeita lead fora da organizacao';
+  END;
+END $$;
+
+-- orcamento da A e invisivel para B
+SELECT set_config('request.jwt.claims',
+  json_build_object('sub', 'bbbbbbbb-0000-0000-0000-000000000001', 'role', 'authenticated')::text, true);
+
+DO $$
+DECLARE n INT;
+BEGIN
+  SELECT count(*) INTO n FROM public.quotes;
+  IF n <> 0 THEN RAISE EXCEPTION 'FALHA RLS: B viu % orcamentos da A', n; END IF;
+  SELECT count(*) INTO n FROM public.quote_items;
+  IF n <> 0 THEN RAISE EXCEPTION 'FALHA RLS: B viu % itens de orcamento da A', n; END IF;
+  RAISE NOTICE 'OK: orcamentos da org A invisiveis para a org B';
+END $$;
+
 ROLLBACK; -- nada persiste; para inspeção manual troque por COMMIT com cuidado
